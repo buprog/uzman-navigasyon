@@ -1,0 +1,63 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { FormEvent, useState } from "react";
+
+export default function GirisPage() {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    const fd = new FormData(e.currentTarget);
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: fd.get("email"),
+        password: fd.get("password"),
+      }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) {
+      setError(data.error || "Giriş başarısız");
+      return;
+    }
+    router.push("/turlar");
+    router.refresh();
+  }
+
+  return (
+    <div className="mx-auto max-w-md px-4 py-16">
+      <h1 className="text-2xl font-bold">Giriş</h1>
+      <p className="mt-1 text-sm text-slate-500">
+        Hesabınız yok mu?{" "}
+        <Link href="/kayit" className="text-teal-700 underline">
+          Kayıt ol
+        </Link>
+      </p>
+      <form onSubmit={onSubmit} className="card mt-6 space-y-4">
+        <div>
+          <label className="label">E-posta</label>
+          <input name="email" type="email" required className="input" />
+        </div>
+        <div>
+          <label className="label">Şifre</label>
+          <input name="password" type="password" required className="input" />
+        </div>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <button type="submit" disabled={loading} className="btn-primary w-full">
+          {loading ? "Giriş yapılıyor…" : "Giriş yap"}
+        </button>
+      </form>
+      <p className="mt-4 text-xs text-slate-400">
+        Demo: operator@demo.com / demo1234
+      </p>
+    </div>
+  );
+}
