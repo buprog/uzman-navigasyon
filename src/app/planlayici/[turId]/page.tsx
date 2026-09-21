@@ -69,6 +69,7 @@ export default function PlanlayiciPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [briefingOpen, setBriefingOpen] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/tours/${turId}`);
@@ -211,6 +212,34 @@ export default function PlanlayiciPage() {
     await load();
   }
 
+  async function applyDaySuggestions() {
+    if (!tour) return;
+    if (!confirm("Mevcut duraklar silinip önerilen gün planı uygulanacak. Devam edilsin mi?")) {
+      return;
+    }
+    setSuggestionsLoading(true);
+    try {
+      const res = await fetch(`/api/tours/${tour.id}/day-suggestions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apply: true }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMsg(`Günlük plan uygulandı (${data.appliedDays} gün)`);
+        await load();
+      } else {
+        setMsg(data.error || "Öneri oluşturulamadı");
+      }
+    } catch (err) {
+      setMsg("Öneri oluşturulurken hata");
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  }
+
+  const canApplySuggestions = tour && tour.dayCount >= 2 && tour.stops.some((s) => s.dayIndex === 0);
+
   if (!tour) {
     return <div className="p-8 text-slate-500">Planlayıcı yükleniyor…</div>;
   }
@@ -300,6 +329,22 @@ export default function PlanlayiciPage() {
                 </button>
               ))}
             </div>
+            {canApplySuggestions && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={applyDaySuggestions}
+                  disabled={suggestionsLoading}
+                  className="w-full rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-medium text-teal-800 hover:bg-teal-100 disabled:opacity-50"
+                  title="Basit gün planı önerilerini uygula"
+                >
+                  {suggestionsLoading ? "Hazırlanıyor…" : "✨ Önerilen gün planını uygula"}
+                </button>
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Gün 1 gidiş, ortalar gezinti, son gün dönüş önerisi.
+                </p>
+              </div>
+            )}
             <p className="mt-2 text-xs text-slate-400">
               Haritaya tıklayarak durak ekleyin.
             </p>
@@ -451,9 +496,7 @@ export default function PlanlayiciPage() {
         {/* Map */}
         <div className="relative min-w-0 flex-1 print:hidden">
           <MapView
-            stops={[...tour.stops]
-              .filter((s) => !s.skipped)
-              .sort((a, b) => a.dayIndex - b.dayIndex || a.order - b.order)}
+            stops={dayStops}
             onMapClick={addStopAt}
             className="h-full w-full min-h-[320px]"
             mockChargers={mockChargers}
