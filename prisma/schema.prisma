@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String?  // null when future OAuth-only
+  name           String
+  companyName    String?
+  plan           String   @default("basic") // basic | premium
+  authProvider   String   @default("credentials") // credentials | google (future)
+  googleSub      String?  @unique // future Google subject id
+  // Araç / sürücü profili (v1 stub — KAPSAM §13)
+  vehicleMake       String?
+  vehicleModel      String?
+  fuelType          String?  // benzin | dizel | lpg | elektrikli | hibrit
+  consumptionPer100 Float?   // L/100km veya kWh/100km
+  bloodType         String?
+  emergencyPhone    String?
+  preferTolls       Boolean  @default(true)
+  odometerKm        Int?     // araç km saati
+  tireTreadMm       Float?   // diş derinliği mm (öneri stub)
+  createdAt      DateTime @default(now())
+  tours          Tour[]
+}
+
+model Tour {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String      @default("")
+  startName   String      @default("")
+  endName     String      @default("")
+  startDate   String?
+  endDate     String?
+  dayCount    Int         @default(1)
+  isSample    Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  stops       Stop[]
+  departures  Departure[]
+}
+
+model Stop {
+  id          String  @id @default(cuid())
+  tourId      String
+  tour        Tour    @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  dayIndex    Int     @default(0)
+  order       Int     @default(0)
+  type        String  @default("gezi") // gecis | gezi | yemek | konaklama
+  name        String
+  durationMin Int     @default(60)
+  note        String  @default("")
+  lat         Float
+  lng         Float
+  address     String  @default("")
+  skipped     Boolean @default(false)
+}
+
+model Departure {
+  id           String        @id @default(cuid())
+  tourId       String
+  tour         Tour          @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  date         String
+  capacity     Int           @default(20)
+  bookedCount  Int           @default(0)
+  status       String        @default("taslak") // taslak | yayin | dolu | iptal
+  shareCode    String        @unique
+  note         String        @default("")
+  createdAt    DateTime      @default(now())
+  reservations Reservation[]
+}
+
+model Reservation {
+  id          String    @id @default(cuid())
+  departureId String
+  departure   Departure @relation(fields: [departureId], references: [id], onDelete: Cascade)
+  name        String
+  email       String
+  phone       String    @default("")
+  pax         Int       @default(1)
+  note        String    @default("")
+  status      String    @default("beklemede") // beklemede | onayli | iptal
+  createdAt   DateTime  @default(now())
+}
