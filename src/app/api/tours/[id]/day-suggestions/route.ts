@@ -34,15 +34,13 @@ export async function POST(req: Request, { params }: Params) {
     );
   }
 
-  // Try to get start/end coordinates from existing stops or tour metadata
+  // Find start and end places from stops
+  // Start: first stop on day 0
   const startStop = tour.stops.find((s) => s.dayIndex === 0 && s.order === 0);
-  const endStop = tour.stops.find(
-    (s) => s.dayIndex === tour.dayCount - 1
-  );
-
+  
   if (!startStop) {
     return NextResponse.json(
-      { error: "Başlangıç noktası bulunamadı." },
+      { error: "Başlangıç noktası bulunamadı. Lütfen tura başlangıç noktası ekleyin." },
       { status: 400 }
     );
   }
@@ -53,13 +51,50 @@ export async function POST(req: Request, { params }: Params) {
     name: startStop.name || tour.startName || "Başlangıç",
   };
 
+  // End: try to find the last stop (on last day or any stop far from start)
+  let endStop = tour.stops.find(
+    (s) => s.dayIndex === tour.dayCount - 1 && s.id !== startStop.id
+  );
+  
+  // If not found on last day, find the stop furthest from start
+  if (!endStop) {
+    let maxDist = 0;
+    for (const stop of tour.stops) {
+      if (stop.id === startStop.id) continue;
+      const dist = Math.sqrt(
+        Math.pow(stop.lat - startStop.lat, 2) + 
+        Math.pow(stop.lng - startStop.lng, 2)
+      );
+      if (dist > maxDist) {
+        maxDist = dist;
+        endStop = stop;
+      }
+    }
+  }
+
   let endPlace = null;
-  if (endStop && endStop.id !== startStop.id) {
-    endPlace = {
-      lat: endStop.lat,
-      lng: endStop.lng,
-      name: endStop.name || tour.endName || "Bitiş",
-    };
+  if (endStop) {
+    // Check if end is different from start (at least 0.01 degrees, ~1km)
+    const distFromStart = Math.sqrt(
+      Math.pow(endStop.lat - startStop.lat, 2) + 
+      Math.pow(endStop.lng - startStop.lng, 2)
+    );
+    
+    if (distFromStart > 0.01) {
+      endPlace = {
+        lat: endStop.lat,
+        lng: endStop.lng,
+        name: endStop.name || tour.endName || "Varış",
+      };
+    }
+  }
+  
+  // If no distinct end place found, require user to add it
+  if (!endPlace) {
+    return NextResponse.json(
+      { error: "Varış noktası bulunamadı veya başlangıçla aynı. Lütfen farklı bir varış noktası ekleyin veya tura durak ekleyin." },
+      { status: 400 }
+    );
   }
 
   const body = await req.json();

@@ -46,6 +46,8 @@ export async function generateDaySuggestions(params: {
   }
 
   const suggestions: DaySuggestion[] = [];
+  
+  // Determine the destination: if different end place, use it; otherwise it's a round trip
   const isRoundTrip = !endPlace || areSameLocation(startPlace, endPlace);
   const destination = endPlace && !isRoundTrip ? endPlace : startPlace;
 
@@ -61,15 +63,16 @@ export async function generateDaySuggestions(params: {
     address: "",
   });
 
-  // If there's a different destination, add it as the end of day 1
-  if (!isRoundTrip && endPlace) {
+  // Always add destination as the end of day 1 (the arrival point)
+  // This becomes the anchor for all subsequent days
+  if (endPlace) {
     day1Stops.push({
       name: endPlace.name,
       lat: endPlace.lat,
       lng: endPlace.lng,
       type: "konaklama" as const,
       durationMin: 60,
-      note: "Varış / konaklama",
+      note: "Varış / konaklama (günlük başlangıç çapası)",
       address: "",
     });
   }
@@ -83,7 +86,7 @@ export async function generateDaySuggestions(params: {
 
   // Middle days: Explore around destination
   const middleDayCount = dayCount - 2;
-  if (middleDayCount > 0) {
+  if (middleDayCount > 0 && destination) {
     const nearbyPOIs = await findNearbyPOIs(destination, middleDayCount * 3);
     
     for (let i = 0; i < middleDayCount; i++) {
@@ -92,18 +95,39 @@ export async function generateDaySuggestions(params: {
       
       const dayStops = [];
       
-      // Start from the destination (where day 1 ended)
+      // CRITICAL: Each day starts where the previous day ended (day 1 ended at destination)
+      // This is the anchor point for all subsequent days
       dayStops.push({
         name: destination.name,
         lat: destination.lat,
         lng: destination.lng,
         type: "gecis" as const,
         durationMin: 0,
-        note: "Günlük başlangıç noktası",
+        note: `Gün ${dayIndex + 1} başlangıç - önceki gün varış noktası`,
         address: "",
       });
 
-      // Add nearby POIs
+      // Add nearby POIs (always ensure at least 2 POIs per day)
+      if (dayPOIs.length < 2) {
+        // Fallback: create simple offset points around destination
+        const fallbacks = [
+          { lat: destination.lat + 0.02, lng: destination.lng + 0.01, name: `${destination.name} Kuzey`, note: "Yerel gezinti" },
+          { lat: destination.lat - 0.01, lng: destination.lng + 0.02, name: `${destination.name} Güney`, note: "Yerel gezinti" },
+          { lat: destination.lat + 0.01, lng: destination.lng - 0.02, name: `${destination.name} Batı`, note: "Yerel gezinti" },
+        ];
+        
+        while (dayPOIs.length < 2 && fallbacks.length > 0) {
+          const fb = fallbacks.shift()!;
+          dayPOIs.push({
+            name: fb.name,
+            lat: fb.lat,
+            lng: fb.lng,
+            note: fb.note,
+            address: "",
+          });
+        }
+      }
+
       dayPOIs.forEach((poi, idx) => {
         dayStops.push({
           name: poi.name,
@@ -125,34 +149,32 @@ export async function generateDaySuggestions(params: {
     }
   }
 
-  // Last day: Return (if multi-day)
-  if (dayCount >= 2) {
+  // Last day: Return (destination → start)
+  if (dayCount >= 2 && destination) {
     const lastDayIndex = dayCount - 1;
     const returnStops = [];
 
-    // Start from destination
+    // Start from destination (where middle days have been exploring)
     returnStops.push({
       name: destination.name,
       lat: destination.lat,
       lng: destination.lng,
       type: "gecis" as const,
       durationMin: 0,
-      note: "Dönüş başlangıcı",
+      note: `Gün ${lastDayIndex + 1} dönüş başlangıcı - önceki gün varış noktası`,
       address: "",
     });
 
-    // Return to start (if not round-trip)
-    if (!isRoundTrip) {
-      returnStops.push({
-        name: startPlace.name,
-        lat: startPlace.lat,
-        lng: startPlace.lng,
-        type: "gecis" as const,
-        durationMin: 0,
-        note: "Dönüş noktası",
-        address: "",
-      });
-    }
+    // Return to start (always, even for round trips)
+    returnStops.push({
+      name: startPlace.name,
+      lat: startPlace.lat,
+      lng: startPlace.lng,
+      type: "gecis" as const,
+      durationMin: 0,
+      note: "Dönüş noktası",
+      address: "",
+    });
 
     suggestions.push({
       dayIndex: lastDayIndex,
@@ -238,12 +260,16 @@ async function findNearbyPOIs(
     console.error("Error finding nearby POIs:", err);
   }
 
-  // If we couldn't find enough POIs, create some basic suggestions around the destination
+  // If we couldn't find enough POIs, create fallback suggestions around the destination
+  // Use larger offsets (~2-5km) to make routes more visible
   if (pois.length < 3) {
     const fallbackPOIs = [
       { name: `${center.name} Merkez`, lat: center.lat, lng: center.lng, note: "Merkez bölge", address: "" },
-      { name: `${center.name} çevresi`, lat: center.lat + 0.01, lng: center.lng + 0.01, note: "Çevre gezisi", address: "" },
-      { name: `${center.name} bölgesi`, lat: center.lat - 0.01, lng: center.lng - 0.01, note: "Bölge gezisi", address: "" },
+      { name: `${center.name} Kuzey`, lat: center.lat + 0.03, lng: center.lng + 0.01, note: "Kuzey bölgesi gezisi", address: "" },
+      { name: `${center.name} Güney`, lat: center.lat - 0.02, lng: center.lng + 0.02, note: "Güney bölgesi gezisi", address: "" },
+      { name: `${center.name} Doğu`, lat: center.lat + 0.01, lng: center.lng + 0.03, note: "Doğu bölgesi gezisi", address: "" },
+      { name: `${center.name} Batı`, lat: center.lat - 0.01, lng: center.lng - 0.03, note: "Batı bölgesi gezisi", address: "" },
+      { name: `${center.name} çevresi`, lat: center.lat + 0.02, lng: center.lng - 0.02, note: "Çevre gezisi", address: "" },
     ];
     
     while (pois.length < limit && fallbackPOIs.length > 0) {
