@@ -51,12 +51,25 @@ export async function POST(req: Request, { params }: Params) {
     name: startStop.name || tour.startName || "Başlangıç",
   };
 
-  // End: try to find the last stop (on last day or any stop far from start)
-  let endStop = tour.stops.find(
+  // Robust end place resolution (multiple strategies):
+  let endStop = null;
+  
+  // Strategy 1: Find stop on last day that's not the start
+  endStop = tour.stops.find(
     (s) => s.dayIndex === tour.dayCount - 1 && s.id !== startStop.id
   );
   
-  // If not found on last day, find the stop furthest from start
+  // Strategy 2: If tour.endName exists, find stop matching that name
+  if (!endStop && tour.endName) {
+    endStop = tour.stops.find(
+      (s) => s.id !== startStop.id && 
+      (s.name.toLowerCase().includes(tour.endName.toLowerCase()) ||
+       s.note.toLowerCase().includes("bitiş") ||
+       s.note.toLowerCase().includes("varış"))
+    );
+  }
+  
+  // Strategy 3: Find the stop furthest from start
   if (!endStop) {
     let maxDist = 0;
     for (const stop of tour.stops) {
@@ -89,10 +102,19 @@ export async function POST(req: Request, { params }: Params) {
     }
   }
   
-  // If no distinct end place found, require user to add it
+  // Critical validation: must have distinct start and end for multi-day suggestions
   if (!endPlace) {
     return NextResponse.json(
-      { error: "Varış noktası bulunamadı veya başlangıçla aynı. Lütfen farklı bir varış noktası ekleyin veya tura durak ekleyin." },
+      { error: "Varış noktası bulunamadı veya başlangıçla aynı. Lütfen farklı bir varış noktası ekleyin." },
+      { status: 400 }
+    );
+  }
+  
+  // Additional safety: require at least 2 stops on day 0 OR valid endPlace
+  const day0Stops = tour.stops.filter((s) => s.dayIndex === 0);
+  if (day0Stops.length < 2 && !endPlace) {
+    return NextResponse.json(
+      { error: "Yeterli durak yok. Lütfen başlangıç ve varış noktası ekleyin." },
       { status: 400 }
     );
   }
@@ -106,6 +128,15 @@ export async function POST(req: Request, { params }: Params) {
     startPlace,
     endPlace,
   });
+
+  // Critical validation: ensure day 1 (dayIndex 0) has at least 2 stops
+  const day1Suggestion = suggestions.find((s) => s.dayIndex === 0);
+  if (!day1Suggestion || day1Suggestion.stops.length < 2) {
+    return NextResponse.json(
+      { error: "Gün 1 için yeterli durak oluşturulamadı. Başlangıç ve varış noktalarını kontrol edin." },
+      { status: 500 }
+    );
+  }
 
   if (!apply) {
     return NextResponse.json({ suggestions });

@@ -44,15 +44,23 @@ export async function generateDaySuggestions(params: {
   if (dayCount < 2) {
     return [];
   }
+  
+  // Critical: endPlace MUST exist for multi-day suggestions
+  if (!endPlace) {
+    throw new Error("endPlace is required for multi-day suggestions");
+  }
 
   const suggestions: DaySuggestion[] = [];
   
-  // Determine the destination: if different end place, use it; otherwise it's a round trip
-  const isRoundTrip = !endPlace || areSameLocation(startPlace, endPlace);
-  const destination = endPlace && !isRoundTrip ? endPlace : startPlace;
+  // Determine the destination
+  const isRoundTrip = areSameLocation(startPlace, endPlace);
+  const destination = !isRoundTrip ? endPlace : startPlace;
 
-  // Day 1: Outbound travel to destination
+  // Day 1: Outbound travel (start → destination)
+  // ALWAYS has 2 stops: start + destination
   const day1Stops = [];
+  
+  // Stop 1: Starting point
   day1Stops.push({
     name: startPlace.name,
     lat: startPlace.lat,
@@ -63,19 +71,16 @@ export async function generateDaySuggestions(params: {
     address: "",
   });
 
-  // Always add destination as the end of day 1 (the arrival point)
-  // This becomes the anchor for all subsequent days
-  if (endPlace) {
-    day1Stops.push({
-      name: endPlace.name,
-      lat: endPlace.lat,
-      lng: endPlace.lng,
-      type: "konaklama" as const,
-      durationMin: 60,
-      note: "Varış / konaklama (günlük başlangıç çapası)",
-      address: "",
-    });
-  }
+  // Stop 2: Destination (arrival point - anchor for all subsequent days)
+  day1Stops.push({
+    name: endPlace.name,
+    lat: endPlace.lat,
+    lng: endPlace.lng,
+    type: "konaklama" as const,
+    durationMin: 60,
+    note: "Varış / konaklama (günlük başlangıç çapası)",
+    address: "",
+  });
 
   suggestions.push({
     dayIndex: 0,
