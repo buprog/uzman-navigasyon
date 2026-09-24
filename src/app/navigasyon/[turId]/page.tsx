@@ -3,7 +3,9 @@
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { NavigationView } from "@/components/NavigationView";
+import { PaymentModal } from "@/components/PaymentModal";
 import type { MapStop } from "@/components/MapView";
+import { isTrialActive, checkTrialResetParam } from "@/lib/trial";
 
 type Stop = {
   id: string;
@@ -35,6 +37,9 @@ export default function NavigasyonPage() {
   const [tour, setTour] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [userPlan, setUserPlan] = useState<string>("basic");
+  const [trialActive, setTrialActive] = useState(true);
 
   const load = useCallback(async () => {
     try {
@@ -68,10 +73,41 @@ export default function NavigasyonPage() {
 
   useEffect(() => {
     load();
+    
+    // Check trial reset param
+    checkTrialResetParam();
+    
+    // Load trial and user state
+    setTrialActive(isTrialActive());
+    
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.user) setUserPlan(d.user.plan || "basic");
+      })
+      .catch(() => {});
   }, [load]);
 
   const handleExit = () => {
     router.push(`/planlayici/${turId}`);
+  };
+  
+  const handleFirstArrival = () => {
+    // Only show payment modal if trial is active and user is not premium
+    if (trialActive && userPlan !== "premium") {
+      setShowPaymentModal(true);
+    }
+  };
+  
+  const handlePaymentComplete = () => {
+    setShowPaymentModal(false);
+    setUserPlan("premium");
+    setTrialActive(false);
+  };
+  
+  const handlePaymentClose = () => {
+    setShowPaymentModal(false);
+    setTrialActive(false);
   };
 
   if (loading) {
@@ -137,5 +173,19 @@ export default function NavigasyonPage() {
     );
   }
 
-  return <NavigationView stops={activeStops} onExit={handleExit} />;
+  return (
+    <>
+      <NavigationView 
+        stops={activeStops} 
+        onExit={handleExit}
+        onFirstArrival={handleFirstArrival}
+      />
+      {showPaymentModal && (
+        <PaymentModal
+          onClose={handlePaymentClose}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      )}
+    </>
+  );
 }

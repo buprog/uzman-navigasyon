@@ -17,6 +17,7 @@ import {
   formatDuration,
   mockTireServiceOffers,
 } from "@/lib/driverAssistStubs";
+import { checkTrialResetParam, isTrialActive } from "@/lib/trial";
 
 type Stop = {
   id: string;
@@ -66,6 +67,7 @@ export default function PlanlayiciPage() {
   const [tour, setTour] = useState<Tour | null>(null);
   const [vehicle, setVehicle] = useState<VehicleProfile | null>(null);
   const [userPlan, setUserPlan] = useState<string>("basic");
+  const [trialActive, setTrialActive] = useState(true);
   const [activeDay, setActiveDay] = useState(0);
   const [selected, setSelected] = useState<Stop | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -79,6 +81,7 @@ export default function PlanlayiciPage() {
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   
   const isPremium = userPlan === "premium";
+  const premiumUnlocked = isPremium || trialActive;
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/tours/${turId}`);
@@ -106,6 +109,12 @@ export default function PlanlayiciPage() {
   }, [load]);
 
   useEffect(() => {
+    // Check for trial reset param
+    checkTrialResetParam();
+    
+    // Load trial state
+    setTrialActive(isTrialActive());
+    
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {

@@ -18,15 +18,17 @@ import {
 type Props = {
   stops: MapStop[];
   onExit: () => void;
+  onFirstArrival?: () => void;
 };
 
-export function NavigationView({ stops, onExit }: Props) {
+export function NavigationView({ stops, onExit, onFirstArrival }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const lastSpokenStepRef = useRef<number>(-1);
   const rerouteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const firstArrivalTriggeredRef = useRef<boolean>(false);
 
   const [mapReady, setMapReady] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<[number, number] | null>(null);
@@ -281,6 +283,12 @@ export function NavigationView({ stops, onExit }: Props) {
     }
 
     if (currentStop && haversineDistance(lat, lng, currentStop.lat, currentStop.lng) < 30) {
+      // Trigger first arrival callback once
+      if (!firstArrivalTriggeredRef.current && onFirstArrival) {
+        firstArrivalTriggeredRef.current = true;
+        onFirstArrival();
+      }
+      
       if (currentStopIndex < stops.length - 1) {
         setCurrentStopIndex(currentStopIndex + 1);
         void calculateRoute(currentLocation, currentStopIndex + 1);
