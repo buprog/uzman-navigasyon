@@ -209,6 +209,21 @@ export default function PlanlayiciPage() {
     }
   }, [fullScreenMap]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (fullScreenMap) {
+        document.body.classList.add('planner-fullscreen-mobile');
+      } else {
+        document.body.classList.remove('planner-fullscreen-mobile');
+      }
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        document.body.classList.remove('planner-fullscreen-mobile');
+      }
+    };
+  }, [fullScreenMap]);
+
   async function saveStop(form: Partial<Stop>) {
     if (!tour || !selected) return;
     const res = await fetch(`/api/tours/${tour.id}/stops/${selected.id}`, {
@@ -565,21 +580,6 @@ export default function PlanlayiciPage() {
       </ul>
     </>
   );
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (fullScreenMap) {
-        document.body.classList.add('planner-fullscreen-mobile');
-      } else {
-        document.body.classList.remove('planner-fullscreen-mobile');
-      }
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        document.body.classList.remove('planner-fullscreen-mobile');
-      }
-    };
-  }, [fullScreenMap]);
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
