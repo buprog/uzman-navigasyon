@@ -61,7 +61,7 @@ export function Nav() {
   if (hideOn) return null;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur transition-transform duration-300 planner-fullscreen-mobile:lg:translate-y-0 planner-fullscreen-mobile:-translate-y-full">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 font-bold text-teal-800">
