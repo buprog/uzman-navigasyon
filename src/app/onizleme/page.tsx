@@ -1,25 +1,36 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 export default function OnizlemePage() {
   const [device, setDevice] = useState<"iphone" | "android">("iphone");
   const [firstTourId, setFirstTourId] = useState<string | null>(null);
+  const [scale, setScale] = useState(1);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const router = useRouter();
 
-  // Check screen size and redirect on mobile
+  // Calculate scale for small viewports
   useEffect(() => {
-    const checkMobile = () => {
-      if (window.innerWidth < 768) {
-        router.push("/");
-      }
+    const calculateScale = () => {
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      const phoneHeight = device === "iphone" ? 868 : 939; // frame height + padding
+      const phoneWidth = device === "iphone" ? 414 : 436; // frame width
+      
+      // Add space for controls (120px top)
+      const availableHeight = viewportHeight - 120;
+      const availableWidth = viewportWidth - 64; // 32px padding each side
+      
+      const scaleH = availableHeight / phoneHeight;
+      const scaleW = availableWidth / phoneWidth;
+      const newScale = Math.min(1, scaleH, scaleW);
+      
+      setScale(newScale);
     };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, [router]);
+    
+    calculateScale();
+    window.addEventListener("resize", calculateScale);
+    return () => window.removeEventListener("resize", calculateScale);
+  }, [device]);
 
   // Fetch first tour ID for quick navigation
   useEffect(() => {
@@ -138,7 +149,14 @@ export default function OnizlemePage() {
         </div>
 
         <div className="flex justify-center">
-          <div className="relative" style={{ width: spec.width + 24, height: spec.height + 24 }}>
+          <div
+            className="relative origin-top"
+            style={{
+              width: spec.width + 24,
+              height: spec.height + 24,
+              transform: `scale(${scale})`,
+            }}
+          >
             {/* Phone frame */}
             <div
               className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 shadow-2xl"
