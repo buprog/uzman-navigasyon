@@ -33,7 +33,10 @@ export default function RezervasyonlarPage() {
     const q = status ? `?status=${status}` : "";
     const res = await fetch(`/api/reservations${q}`);
     if (res.status === 401) {
-      router.push("/giris");
+      await fetch("/api/auth/demo", { method: "POST" });
+      const res2 = await fetch(`/api/reservations${q}`);
+      const data = await res2.json();
+      setItems(data.reservations || []);
       return;
     }
     const data = await res.json();

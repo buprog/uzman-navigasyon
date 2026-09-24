@@ -54,8 +54,12 @@ export default function AyarlarPage() {
 
   useEffect(() => {
     fetch("/api/auth/me")
-      .then((r) => {
-        if (r.status === 401) router.push("/giris");
+      .then(async (r) => {
+        if (r.status === 401) {
+          await fetch("/api/auth/demo", { method: "POST" });
+          const r2 = await fetch("/api/auth/me");
+          return r2.json();
+        }
         return r.json();
       })
       .then((d) => setUser(d.user));

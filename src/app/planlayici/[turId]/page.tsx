@@ -63,17 +63,27 @@ export default function PlanlayiciPage() {
   const router = useRouter();
   const [tour, setTour] = useState<Tour | null>(null);
   const [vehicle, setVehicle] = useState<VehicleProfile | null>(null);
+  const [userPlan, setUserPlan] = useState<string>("basic");
   const [activeDay, setActiveDay] = useState(0);
   const [selected, setSelected] = useState<Stop | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [briefingOpen, setBriefingOpen] = useState(false);
+  
+  const isPremium = userPlan === "premium";
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/tours/${turId}`);
     if (res.status === 401) {
-      router.push("/giris");
+      await fetch("/api/auth/demo", { method: "POST" });
+      const res2 = await fetch(`/api/tours/${turId}`);
+      if (!res2.ok) {
+        setMsg("Tur yüklenemedi");
+        return;
+      }
+      const data = await res2.json();
+      setTour(data.tour);
       return;
     }
     if (!res.ok) {
@@ -82,13 +92,20 @@ export default function PlanlayiciPage() {
     }
     const data = await res.json();
     setTour(data.tour);
-  }, [turId, router]);
+  }, [turId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.user) setUserPlan(d.user.plan || "basic");
+      })
+      .catch(() => {});
+      
     fetch("/api/account/vehicle")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -366,6 +383,127 @@ export default function PlanlayiciPage() {
             )}
           </div>
 
+          {/* Premium features */}
+          <div className="border-b border-slate-100 p-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Arama özellikleri
+            </h3>
+            <ul className="mt-2 space-y-2">
+              <li className={`rounded-lg border p-2 text-xs ${isPremium ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-slate-50 opacity-60"}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {!isPremium && <span className="text-slate-400">🔒</span>}
+                    <span className={isPremium ? "font-medium text-teal-900" : "text-slate-600"}>
+                      Otomobil servislerini bulma
+                    </span>
+                  </div>
+                  {isPremium && <span className="badge-premium !text-[9px] !px-1.5 !py-0.5">Premium</span>}
+                </div>
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Rota üzerindeki servisleri haritada görüntüle
+                </p>
+                {!isPremium && (
+                  <button
+                    onClick={() => router.push("/auth")}
+                    className="mt-2 w-full rounded bg-slate-700 px-2 py-1 text-[10px] font-medium text-white hover:bg-slate-800 transition"
+                  >
+                    Aktif et
+                  </button>
+                )}
+              </li>
+              
+              <li className={`rounded-lg border p-2 text-xs ${isPremium ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-slate-50 opacity-60"}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {!isPremium && <span className="text-slate-400">🔒</span>}
+                    <span className={isPremium ? "font-medium text-teal-900" : "text-slate-600"}>
+                      Otel bulma
+                    </span>
+                  </div>
+                  {isPremium && <span className="badge-premium !text-[9px] !px-1.5 !py-0.5">Premium</span>}
+                </div>
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Güzergâh yakınındaki otelleri ara ve ekle
+                </p>
+                {!isPremium && (
+                  <button
+                    onClick={() => router.push("/auth")}
+                    className="mt-2 w-full rounded bg-slate-700 px-2 py-1 text-[10px] font-medium text-white hover:bg-slate-800 transition"
+                  >
+                    Aktif et
+                  </button>
+                )}
+              </li>
+              
+              <li className={`rounded-lg border p-2 text-xs ${isPremium ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-slate-50 opacity-60"}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {!isPremium && <span className="text-slate-400">🔒</span>}
+                    <span className={isPremium ? "font-medium text-teal-900" : "text-slate-600"}>
+                      Restoran bulma
+                    </span>
+                  </div>
+                  {isPremium && <span className="badge-premium !text-[9px] !px-1.5 !py-0.5">Premium</span>}
+                </div>
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Yol üzerindeki restoranları keşfet
+                </p>
+                {!isPremium && (
+                  <button
+                    onClick={() => router.push("/auth")}
+                    className="mt-2 w-full rounded bg-slate-700 px-2 py-1 text-[10px] font-medium text-white hover:bg-slate-800 transition"
+                  >
+                    Aktif et
+                  </button>
+                )}
+              </li>
+              
+              <li className={`rounded-lg border p-2 text-xs ${isPremium ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-slate-50 opacity-60"}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {!isPremium && <span className="text-slate-400">🔒</span>}
+                    <span className={isPremium ? "font-medium text-teal-900" : "text-slate-600"}>
+                      Çevredeki aktiviteleri bulma
+                    </span>
+                  </div>
+                  {isPremium && <span className="badge-premium !text-[9px] !px-1.5 !py-0.5">Premium</span>}
+                </div>
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Rotanıza yakın turistik aktiviteler
+                </p>
+                {!isPremium && (
+                  <button
+                    onClick={() => router.push("/auth")}
+                    className="mt-2 w-full rounded bg-slate-700 px-2 py-1 text-[10px] font-medium text-white hover:bg-slate-800 transition"
+                  >
+                    Aktif et
+                  </button>
+                )}
+              </li>
+            </ul>
+          </div>
+          
+          {/* Emergency button - always free */}
+          <div className="border-b border-slate-100 p-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Acil durum
+            </h3>
+            <button
+              type="button"
+              className="mt-2 w-full rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 transition"
+              onClick={() => {
+                if (confirm("En yakın acil servisleri haritada göster?")) {
+                  setMsg("Acil servisler: 112'yi arayın. Harita özelliği yakında.");
+                }
+              }}
+            >
+              🚨 Acil buton (112)
+            </button>
+            <p className="mt-2 text-[10px] text-slate-500">
+              Tüm kullanıcılar için ücretsiz. En yakın acil servisler.
+            </p>
+          </div>
+
           {/* Öneriler stub */}
           <div className="border-b border-slate-100 p-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -389,18 +527,6 @@ export default function PlanlayiciPage() {
             </Link>
           </div>
 
-          <div className="border-b border-slate-100 p-3">
-            <button
-              type="button"
-              className="btn-secondary w-full !py-1.5 !text-xs !opacity-60"
-              disabled
-            >
-              112’ye konum SMS (yakında)
-            </button>
-            <p className="mt-1 text-[10px] text-slate-400">
-              Stub — gerçek SMS / canlı 112 yok. Acilde 112’yi arayın.
-            </p>
-          </div>
 
           <ul className="flex-1 space-y-2 overflow-y-auto p-3">
             {dayStops.map((s, i) => (

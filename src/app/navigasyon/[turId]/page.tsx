@@ -40,7 +40,16 @@ export default function NavigasyonPage() {
     try {
       const res = await fetch(`/api/tours/${turId}`);
       if (res.status === 401) {
-        router.push("/giris");
+        await fetch("/api/auth/demo", { method: "POST" });
+        const res2 = await fetch(`/api/tours/${turId}`);
+        if (!res2.ok) {
+          setError("Tur yüklenemedi");
+          setLoading(false);
+          return;
+        }
+        const data = await res2.json();
+        setTour(data.tour);
+        setLoading(false);
         return;
       }
       if (!res.ok) {

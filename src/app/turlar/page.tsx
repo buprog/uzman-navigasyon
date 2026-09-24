@@ -25,7 +25,12 @@ export default function TurlarPage() {
   async function load() {
     const res = await fetch("/api/tours");
     if (res.status === 401) {
-      router.push("/giris");
+      await fetch("/api/auth/demo", { method: "POST" });
+      const res2 = await fetch("/api/tours");
+      const data = await res2.json();
+      setTours(data.tours || []);
+      setPlan(data.plan || "basic");
+      setLoading(false);
       return;
     }
     const data = await res.json();
