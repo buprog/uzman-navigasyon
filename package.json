@@ -23,6 +23,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
     "@types/react": "^18",
