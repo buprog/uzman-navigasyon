@@ -61,8 +61,11 @@ export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange,
     
     const vh = window.innerHeight;
     const sheetHeight = vh - newTranslateY;
-    if (typeof document !== 'undefined') {
-      document.documentElement.style.setProperty('--sheet-h', `${sheetHeight}px`);
+    if (containerRef.current) {
+      const plannerContainer = containerRef.current.closest('.planner-container');
+      if (plannerContainer instanceof HTMLElement) {
+        plannerContainer.style.setProperty('--sheet-h', `${sheetHeight}px`);
+      }
     }
     
     onSnapChange?.(s);
@@ -99,14 +102,28 @@ export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange,
       setSavedSnap(snap);
       const vh = window.innerHeight;
       setTranslateY(vh);
-      if (typeof document !== 'undefined') {
-        document.documentElement.style.setProperty('--sheet-h', '0px');
+      if (containerRef.current) {
+        const plannerContainer = containerRef.current.closest('.planner-container');
+        if (plannerContainer instanceof HTMLElement) {
+          plannerContainer.style.setProperty('--sheet-h', '0px');
+        }
       }
     } else if (savedSnap) {
       snapTo(savedSnap);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fullScreen]);
+
+  useEffect(() => {
+    return () => {
+      if (containerRef.current) {
+        const plannerContainer = containerRef.current.closest('.planner-container');
+        if (plannerContainer instanceof HTMLElement) {
+          plannerContainer.style.removeProperty('--sheet-h');
+        }
+      }
+    };
+  }, []);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (fullScreen) return;
