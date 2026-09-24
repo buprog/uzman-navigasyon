@@ -29,10 +29,14 @@ export default withPWA({
       handler: "NetworkFirst",
       options: {
         cacheName: "pages-cache",
-        networkTimeoutSeconds: 3,
+        networkTimeoutSeconds: 10,
         expiration: {
           maxEntries: 50,
           maxAgeSeconds: 24 * 60 * 60, // 1 day
+        },
+        cacheWillUpdate: async ({ response }) => {
+          // Only cache successful responses
+          return response && response.status === 200 ? response : null;
         },
       },
     },

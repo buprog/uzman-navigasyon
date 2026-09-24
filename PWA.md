@@ -101,6 +101,62 @@ Uzman Navigasyon artık Progressive Web App (PWA) özelliklerine sahiptir. Bu, u
    - Sağ tarafta "Ana ekrana ekle" ikonu görünür
    - İkona tıklayın ve kurulumu tamamlayın
 
+### Android Emulator (Localhost Geliştirme)
+
+Android emulator'da localhost PWA test etmek için özel setup gerekir:
+
+#### 1. Ön Gereksinimler
+```bash
+# Host'ta production build çalıştırın
+npm run build
+npm start  # Port 3000'de çalışmalı
+```
+
+#### 2. ADB Reverse (Port Forwarding)
+Emulator'dan host'a erişim için:
+```bash
+adb reverse tcp:3000 tcp:3000
+```
+Bu komut emulator'ün `127.0.0.1:3000` adresini host'un 3000 portuna yönlendirir.
+
+#### 3. Emulator'da Test
+- Chrome'u açın
+- `http://127.0.0.1:3000` veya `http://10.0.2.2:3000` adresine gidin
+- PWA install prompt'ı bekleyin veya Chrome menüsünden "Install app" seçin
+- Ana ekrandan açtığınızda Türkçe UI görünmeli
+
+#### 4. Yaygın Sorunlar
+
+**"İnternet Bağlantısı Yok" görüyorum:**
+- ✅ `adb reverse tcp:3000 tcp:3000` çalıştırdınız mı?
+- ✅ Host'ta `npm start` ayakta mı? `curl http://localhost:3000` test edin
+- ✅ Emulator Wi-Fi CONNECTED durumunda mı?
+- ⚠️ Emulator dış internete erişemeyebilir (%100 ping loss) ama localhost yeterli
+- 🔄 Service Worker cache'i temizleyin: Chrome > Settings > Site Settings > Storage > uzman-nav > Clear
+- 🗑️ Eski PWA ikonunu silin ve yeniden yükleyin
+
+**Harita karoları yüklenmiyor:**
+- Emulator dış internete erişemiyorsa MapTiler tile'ları yüklenmez
+- Bu normaldir; uygulamanın localhost kısmı çalışmalı
+
+**Yeniden yükleme sonrası /offline görüyorum:**
+- Network timeout artırıldı (10sn) ama ilk yüklemede cache boşsa zaman alabilir
+- "Yeniden Dene" veya "Ana Sayfaya Dön" butonu otomatik probe yapıp kurtaracak
+- DevTools > Application > Service Workers > Unregister + Hard refresh
+
+#### 5. Temiz Test
+Sıfırdan test için:
+```bash
+# 1. Emulator'da Chrome > Settings > Apps > Uzman Nav > Uninstall (varsa)
+# 2. Chrome > Settings > Privacy > Clear browsing data > Advanced > Cached images and Site data
+# 3. Host'ta build yenile:
+npm run build
+npm start
+# 4. adb reverse tekrar:
+adb reverse tcp:3000 tcp:3000
+# 5. Emulator Chrome'da 127.0.0.1:3000 aç ve install et
+```
+
 ## 📱 HTTPS Gereksinimleri
 
 PWA özellikleri (özellikle service worker) yalnızca güvenli bağlamlarda çalışır:
