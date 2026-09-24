@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Uzman Navigasyon",
   description: "Tur operatörleri için harita merkezli çok günlük tur planlayıcı",
   manifest: "/manifest.webmanifest",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"),
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

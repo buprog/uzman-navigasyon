@@ -45,3 +45,4 @@ prisma/dev.db-journal
 /public/workbox-*.js
 /public/sw.js.map
 /public/workbox-*.js.map
+/public/fallback-*.js

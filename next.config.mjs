@@ -16,7 +16,26 @@ export default withPWA({
   disable: process.env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
+  fallbacks: {
+    document: "/offline",
+  },
   runtimeCaching: [
+    {
+      urlPattern: ({ request, url }) => {
+        const isSameOrigin = self.location.origin === url.origin;
+        const isNavigate = request.mode === "navigate";
+        return isSameOrigin && isNavigate;
+      },
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "pages-cache",
+        networkTimeoutSeconds: 3,
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 24 * 60 * 60, // 1 day
+        },
+      },
+    },
     {
       urlPattern: /^https:\/\/api\.maptiler\.com\/.*/i,
       handler: "CacheFirst",
