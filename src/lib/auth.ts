@@ -61,3 +61,41 @@ export async function requireUser() {
   if (!user) throw new Error("UNAUTHORIZED");
   return user;
 }
+
+export async function ensureDemoUser() {
+  const email = "operator@demo.com";
+  let user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    const passwordHash = await hashPassword("demo1234");
+    user = await prisma.user.create({
+      data: {
+        email,
+        name: "Demo Operatör",
+        companyName: "Anadolu Turizm",
+        plan: "basic",
+        authProvider: "credentials",
+        passwordHash,
+        vehicleMake: "Toyota",
+        vehicleModel: "Corolla",
+        fuelType: "hibrit",
+        consumptionPer100: 4.5,
+        bloodType: "A Rh+",
+        emergencyPhone: "+90 555 111 22 33",
+        preferTolls: true,
+        odometerKm: 78500,
+        tireTreadMm: 4.2,
+      },
+    });
+  }
+  return user;
+}
+
+export async function createDemoSession() {
+  const user = await ensureDemoUser();
+  await createSession(user.id);
+  return user;
+}
+
+export function isDemoUser(user: { email: string } | null): boolean {
+  return user?.email === "operator@demo.com";
+}
