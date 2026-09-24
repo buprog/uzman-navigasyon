@@ -9,7 +9,13 @@ type Ad = {
   title: string;
   text: string;
   imageUrl: string;
+  clickUrl: string | null;
   targetGender: string;
+};
+
+type Settings = {
+  rotationInterval: number;
+  rotationMode: string;
 };
 
 type Props = {
@@ -23,6 +29,7 @@ export function AdBanner({ hideOnPages = [] }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [impressionTracked, setImpressionTracked] = useState<Set<string>>(new Set());
+  const [settings, setSettings] = useState<Settings>({ rotationInterval: 5, rotationMode: "sıralı" });
 
   // Check if banner should be hidden on current page
   const shouldHide = hideOnPages.some(page => pathname.startsWith(page));
@@ -39,19 +46,40 @@ export function AdBanner({ hideOnPages = [] }: Props) {
         setLoading(false);
       }
     }
+
+    async function fetchSettings() {
+      try {
+        const res = await fetch("/api/ads/settings");
+        const data = await res.json();
+        if (data.settings) {
+          setSettings(data.settings);
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings:", err);
+      }
+    }
+
     fetchAds();
+    fetchSettings();
   }, []);
 
   useEffect(() => {
     if (ads.length === 0) return;
 
-    // Rotate ads every 5 seconds
+    // Rotate ads based on settings
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % ads.length);
-    }, 5000);
+      if (settings.rotationMode === "rastgele") {
+        // Random mode
+        const randomIndex = Math.floor(Math.random() * ads.length);
+        setCurrentIndex(randomIndex);
+      } else {
+        // Sequential mode (sıralı)
+        setCurrentIndex((prev) => (prev + 1) % ads.length);
+      }
+    }, settings.rotationInterval * 1000);
 
     return () => clearInterval(interval);
-  }, [ads.length]);
+  }, [ads.length, settings]);
 
   useEffect(() => {
     // Track impression when ad is shown
@@ -71,8 +99,14 @@ export function AdBanner({ hideOnPages = [] }: Props) {
     await fetch(`/api/ads/${ad.id}/click`, { method: "POST" })
       .catch(err => console.error("Failed to track click:", err));
     
-    // Navigate to ad detail
-    router.push(`/reklam/${ad.id}`);
+    // Navigate based on clickUrl
+    if (ad.clickUrl) {
+      // External link: open in new tab with noopener and sponsored
+      window.open(ad.clickUrl, "_blank", "noopener,noreferrer");
+    } else {
+      // Internal detail page
+      router.push(`/reklam/${ad.id}`);
+    }
   }
 
   if (loading || ads.length === 0 || shouldHide) {

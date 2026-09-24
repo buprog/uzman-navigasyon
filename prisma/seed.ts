@@ -218,6 +218,17 @@ async function main() {
     });
   }
 
+  // Default ad settings
+  await prisma.adSettings.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      rotationInterval: 5, // 5 seconds
+      rotationMode: "sıralı", // sequential by sort order
+    },
+  });
+
   console.log("Seed OK");
   console.log("  Demo user: operator@demo.com / demo1234 (Basic)");
   console.log("  Sample tour:", tour.name, tour.id);

@@ -57,6 +57,7 @@ export async function GET(req: Request) {
         title: true,
         text: true,
         imageUrl: true,
+        clickUrl: true,
         targetGender: true,
       },
     });

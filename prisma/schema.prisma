@@ -170,6 +170,7 @@ model Ad {
   text          String    // short banner text
   imageUrl      String    // image path or URL
   detailContent String    @default("") // full ad content for detail page
+  clickUrl      String?   // optional click-through URL (external or internal)
   targetGender  String    @default("ALL") // ALL | MALE | FEMALE
   active        Boolean   @default(true)
   startDate     DateTime? // campaign start (null = no start limit)
@@ -182,4 +183,11 @@ model Ad {
 
   @@index([active, startDate, endDate])
   @@index([targetGender])
+}
+
+model AdSettings {
+  id               String   @id @default("default")
+  rotationInterval Int      @default(5) // seconds
+  rotationMode     String   @default("sıralı") // sıralı | rastgele
+  updatedAt        DateTime @updatedAt
 }
