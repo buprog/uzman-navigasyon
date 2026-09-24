@@ -77,7 +77,102 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
     
     setUserId(data.id);
     setUserEmail(data.email);
-    setStep("payment");
+    
+    // For signup, go to verification step
+    if (authMode === "signup") {
+      await sendVerificationCode(data.email);
+      setStep("verify");
+    } else {
+      // For login, go straight to payment
+      await checkCampaign(data.email);
+      setStep("payment");
+    }
+  }
+  
+  async function sendVerificationCode(email: string) {
+    setLoading(true);
+    setError("");
+    
+    try {
+      const res = await fetch("/api/auth/verify-email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      
+      const data = await res.json();
+      setLoading(false);
+      
+      if (!res.ok) {
+        setError(data.error || "Kod gönderilemedi");
+        return false;
+      }
+      
+      setCodeSent(true);
+      return true;
+    } catch (err) {
+      setError("Kod gönderilemedi");
+      setLoading(false);
+      return false;
+    }
+  }
+  
+  async function verifyCode() {
+    if (!verificationCode || verificationCode.length !== 6) {
+      setError("6 haneli kodu girin");
+      return;
+    }
+    
+    setLoading(true);
+    setError("");
+    
+    try {
+      const res = await fetch("/api/auth/verify-email/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userEmail, code: verificationCode }),
+      });
+      
+      const data = await res.json();
+      setLoading(false);
+      
+      if (!res.ok) {
+        setError(data.error || "Doğrulama başarısız");
+        return;
+      }
+      
+      // Get campaign info
+      if (data.emailIdentity) {
+        setCampaignEligible(data.emailIdentity.campaignEligible);
+        setCampaignDaysLeft(data.emailIdentity.campaignDaysLeft || 0);
+      }
+      
+      setStep("payment");
+    } catch (err) {
+      setError("Doğrulama başarısız");
+      setLoading(false);
+    }
+  }
+  
+  async function checkCampaign(email: string) {
+    try {
+      // For logged-in users, check campaign directly
+      const res = await fetch("/api/auth/verify-email/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code: "000000" }), // dummy code for checking only
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.emailIdentity) {
+          setCampaignEligible(data.emailIdentity.campaignEligible);
+          setCampaignDaysLeft(data.emailIdentity.campaignDaysLeft || 0);
+        }
+      }
+    } catch (err) {
+      // Ignore errors, just use normal price
+    }
   }
 
   async function handlePayment() {
@@ -97,12 +192,11 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
         return;
       }
       
-      // Link device to user and activate premium
-      const purchaseRes = await fetch("/api/device/purchase", {
+      // Link email to user and activate premium
+      const purchaseRes = await fetch("/api/email/purchase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          deviceId,
           usedCampaign: campaignEligible,
         }),
       });
@@ -229,6 +323,64 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
               </button>
             </div>
           </div>
+        ) : step === "verify" ? (
+          <div className="p-6">
+            <div className="mb-4 rounded-lg bg-teal-50 border border-teal-200 p-3">
+              <p className="text-sm text-teal-900">
+                ✅ Hesap oluşturuldu! Şimdi e-postanızı doğrulayın.
+              </p>
+            </div>
+            
+            <h2 className="text-xl font-bold mb-2">E-posta Doğrulama</h2>
+            <p className="text-sm text-slate-600 mb-4">
+              <strong>{userEmail}</strong> adresine 6 haneli bir kod gönderdik.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="label">Doğrulama Kodu (6 hane)</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, "");
+                    setVerificationCode(val);
+                  }}
+                  className="input text-center text-2xl tracking-widest"
+                  placeholder="000000"
+                />
+              </div>
+              
+              {error && <p className="text-sm text-red-600">{error}</p>}
+              
+              <button
+                onClick={verifyCode}
+                disabled={loading || verificationCode.length !== 6}
+                className="btn-primary w-full"
+              >
+                {loading ? "Doğrulanıyor…" : "Doğrula ve Devam Et"}
+              </button>
+              
+              <div className="text-center">
+                <button
+                  onClick={() => sendVerificationCode(userEmail)}
+                  disabled={loading}
+                  className="text-sm text-teal-700 hover:text-teal-900 disabled:opacity-50"
+                >
+                  Kodu tekrar gönder
+                </button>
+              </div>
+              
+              <button
+                onClick={handleSkip}
+                className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 transition"
+              >
+                Şimdi değil
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="p-6">
             <div className="mb-4 rounded-lg bg-teal-50 border border-teal-200 p-3">
@@ -265,7 +417,7 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
                     </p>
                   </div>
                   <p className="text-xs text-teal-700 font-semibold mt-1">
-                    İlk {PAYMENT_CONFIG.yearly.campaignDays} gün içinde kayıt olanlara özel!
+                    Kampanya: {campaignDaysLeft} gün kaldı!
                   </p>
                 </div>
               ) : (
