@@ -12,10 +12,12 @@ Uzman Navigasyon artık Progressive Web App (PWA) özelliklerine sahiptir. Bu, u
 
 ### ✅ Service Worker
 - Otomatik kayıt ve aktivasyon
+- **Navigation caching**: HTML sayfaları için NetworkFirst stratejisi (3sn timeout)
+- **Offline fallback**: İnternet yokken `/offline` sayfası gösterilir
 - Harita tile'ları için CacheFirst stratejisi
 - API istekleri için NetworkFirst stratejisi
 - Statik dosyalar için akıllı önbellekleme
-- Çevrimdışı temel çalışma desteği
+- Standalone mod düzgün çalışıyor (Android emulator'da test edildi)
 
 ### ✅ Ana Ekrana Ekleme (A2HS)
 - Android/Chrome: Otomatik "Yükle" prompt'ı
@@ -63,6 +65,19 @@ Uzman Navigasyon artık Progressive Web App (PWA) özelliklerine sahiptir. Bu, u
    - Sayfada: Sağ alt köşede "Uygulamayı Yükle" banner'ı belirir
    - Butona tıklayın ve kurulumu tamamlayın
    - Masaüstünde/uygulama çekmecesinde ikon görünecektir
+
+7. **Standalone Mod Test (Android Emulator)**
+   - Uygulamayı ana ekrana ekleyin
+   - Ana ekran icon'undan açın
+   - ✅ Normal ana sayfa görünmeli (Türkçe içerik)
+   - ✅ Adres çubuğu olmamalı
+   - ✅ Kırık/boş "page" ekranı görmemelisiniz
+
+8. **Offline Mod Test**
+   - DevTools > Network > "Offline" seçin
+   - Sayfayı yenileyin veya yeni bir route'a gidin
+   - `/offline` fallback sayfası görünmeli
+   - "Yeniden Dene" butonu çalışmalı
 
 ### iOS Safari
 
@@ -186,6 +201,20 @@ disable: false, // process.env.NODE_ENV === "development" yerine
 - iOS Safari manifest desteği sınırlıdır
 - Manuel kurulum talimatlarını izleyin
 - Standalone meta etiketlerinin `layout.tsx`'te olduğunu kontrol edin
+
+### Standalone Modda Kırık/Boş Sayfa (Android)
+**Sorun**: Ana ekran icon'undan açıldığında "page" yazısı veya boş ekran
+
+**Çözüm** (artık düzeltildi):
+- Navigation için cache stratejisi eklendi
+- Offline fallback sayfası (`/offline`) oluşturuldu
+- Manifest'te `scope: "/"` açıkça belirtildi
+- `start_url: "/?source=pwa"` ile tracking eklendi
+
+**Test**:
+- Service Worker > Application > Cache Storage'da `pages-cache` görünmeli
+- DevTools Console'da hata olmamalı
+- Standalone açılışta normal ana sayfa gelmelidir
 
 ## 📚 Ek Kaynaklar
 
