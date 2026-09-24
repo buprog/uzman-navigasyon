@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { countTours, LIMIT_MESSAGES, limitsFor } from "@/lib/plan";
 import { computeDayCount } from "@/lib/dayCount";
+import { generateDaySuggestions } from "@/lib/dayPlanner";
 
 type PlacePayload = {
   name?: string;
@@ -55,7 +56,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: dateError }, { status: 400 });
   }
 
-  const stopsToCreate: Array<{
+  // For multi-day tours with valid start/end coordinates, auto-generate all day suggestions
+  const shouldAutoGenerate = 
+    dayCount >= 2 &&
+    startPlace &&
+    Number.isFinite(Number(startPlace.lat)) &&
+    Number.isFinite(Number(startPlace.lng)) &&
+    endPlace &&
+    Number.isFinite(Number(endPlace.lat)) &&
+    Number.isFinite(Number(endPlace.lng));
+
+  let stopsToCreate: Array<{
     dayIndex: number;
     order: number;
     type: string;
@@ -67,45 +78,95 @@ export async function POST(req: Request) {
     address: string;
   }> = [];
 
-  if (
-    startPlace &&
-    Number.isFinite(Number(startPlace.lat)) &&
-    Number.isFinite(Number(startPlace.lng))
-  ) {
-    stopsToCreate.push({
-      dayIndex: 0,
-      order: 0,
-      type: "gecis",
-      name: String(startPlace.name || startName || "Başlangıç"),
-      durationMin: 0,
-      note: "Başlangıç noktası",
-      lat: Number(startPlace.lat),
-      lng: Number(startPlace.lng),
-      address: String(startPlace.displayName || ""),
-    });
+  if (shouldAutoGenerate) {
+    // Check if start and end are different (at least 0.01 degrees apart)
+    const sameAsStart =
+      Math.abs(Number(endPlace.lat) - Number(startPlace.lat)) < 0.01 &&
+      Math.abs(Number(endPlace.lng) - Number(startPlace.lng)) < 0.01;
+
+    if (!sameAsStart) {
+      // Auto-generate day suggestions for all days
+      try {
+        const suggestions = await generateDaySuggestions({
+          dayCount,
+          startPlace: {
+            lat: Number(startPlace.lat),
+            lng: Number(startPlace.lng),
+            name: String(startPlace.name || startName || "Başlangıç"),
+          },
+          endPlace: {
+            lat: Number(endPlace.lat),
+            lng: Number(endPlace.lng),
+            name: String(endPlace.name || endName || "Varış"),
+          },
+        });
+
+        // Convert suggestions to stops
+        suggestions.forEach((daySuggestion) => {
+          daySuggestion.stops.forEach((stop, index) => {
+            stopsToCreate.push({
+              dayIndex: daySuggestion.dayIndex,
+              order: index,
+              type: stop.type,
+              name: stop.name,
+              durationMin: stop.durationMin,
+              note: stop.note,
+              lat: stop.lat,
+              lng: stop.lng,
+              address: stop.address,
+            });
+          });
+        });
+      } catch (err) {
+        console.error("Failed to auto-generate day suggestions:", err);
+        // Fall back to basic start/end stops
+        shouldAutoGenerate && (stopsToCreate = []);
+      }
+    }
   }
 
-  if (
-    endPlace &&
-    Number.isFinite(Number(endPlace.lat)) &&
-    Number.isFinite(Number(endPlace.lng))
-  ) {
-    const sameAsStart =
+  // Fallback: if auto-generation didn't happen, create basic start/end stops
+  if (stopsToCreate.length === 0) {
+    if (
       startPlace &&
-      Math.abs(Number(endPlace.lat) - Number(startPlace.lat)) < 1e-6 &&
-      Math.abs(Number(endPlace.lng) - Number(startPlace.lng)) < 1e-6;
-    if (!sameAsStart) {
+      Number.isFinite(Number(startPlace.lat)) &&
+      Number.isFinite(Number(startPlace.lng))
+    ) {
       stopsToCreate.push({
-        dayIndex: Math.max(0, dayCount - 1),
+        dayIndex: 0,
         order: 0,
         type: "gecis",
-        name: String(endPlace.name || endName || "Bitiş"),
+        name: String(startPlace.name || startName || "Başlangıç"),
         durationMin: 0,
-        note: "Bitiş noktası",
-        lat: Number(endPlace.lat),
-        lng: Number(endPlace.lng),
-        address: String(endPlace.displayName || ""),
+        note: "Başlangıç noktası",
+        lat: Number(startPlace.lat),
+        lng: Number(startPlace.lng),
+        address: String(startPlace.displayName || ""),
       });
+    }
+
+    if (
+      endPlace &&
+      Number.isFinite(Number(endPlace.lat)) &&
+      Number.isFinite(Number(endPlace.lng))
+    ) {
+      const sameAsStart =
+        startPlace &&
+        Math.abs(Number(endPlace.lat) - Number(startPlace.lat)) < 1e-6 &&
+        Math.abs(Number(endPlace.lng) - Number(startPlace.lng)) < 1e-6;
+      if (!sameAsStart) {
+        stopsToCreate.push({
+          dayIndex: Math.max(0, dayCount - 1),
+          order: 0,
+          type: "gecis",
+          name: String(endPlace.name || endName || "Bitiş"),
+          durationMin: 0,
+          note: "Bitiş noktası",
+          lat: Number(endPlace.lat),
+          lng: Number(endPlace.lng),
+          address: String(endPlace.displayName || ""),
+        });
+      }
     }
   }
 
