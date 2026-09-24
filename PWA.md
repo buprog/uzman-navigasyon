@@ -12,8 +12,11 @@ Uzman Navigasyon artık Progressive Web App (PWA) özelliklerine sahiptir. Bu, u
 
 ### ✅ Service Worker
 - Otomatik kayıt ve aktivasyon
-- **Navigation caching**: HTML sayfaları için NetworkFirst stratejisi (3sn timeout)
+- **Navigation caching**: 
+  - Public routes için NetworkFirst (10sn timeout)
+  - Authenticated routes (/planlayici/*, /turlar/*, /ayarlar, /rezervasyonlar) için NetworkFirst (30sn timeout)
 - **Offline fallback**: İnternet yokken `/offline` sayfası gösterilir
+  - Otomatik probe: Host erişilebilirse önceki sayfaya döner
 - Harita tile'ları için CacheFirst stratejisi
 - API istekleri için NetworkFirst stratejisi
 - Statik dosyalar için akıllı önbellekleme
@@ -131,9 +134,15 @@ Bu komut emulator'ün `127.0.0.1:3000` adresini host'un 3000 portuna yönlendiri
 - ✅ `adb reverse tcp:3000 tcp:3000` çalıştırdınız mı?
 - ✅ Host'ta `npm start` ayakta mı? `curl http://localhost:3000` test edin
 - ✅ Emulator Wi-Fi CONNECTED durumunda mı?
+- ⚠️ **Emulator restart yaptıysanız**: `adb reverse` tekrar çalıştırın! Restart sonrası port forwarding sıfırlanır
 - ⚠️ Emulator dış internete erişemeyebilir (%100 ping loss) ama localhost yeterli
 - 🔄 Service Worker cache'i temizleyin: Chrome > Settings > Site Settings > Storage > uzman-nav > Clear
 - 🗑️ Eski PWA ikonunu silin ve yeniden yükleyin
+
+**"Düzenle" (/planlayici/[id]) offline açıyor:**
+- Authenticated routes için timeout 30 saniyeye çıkarıldı
+- Emulator restart sonrası `adb reverse tcp:3000 tcp:3000` şart
+- "Yeniden Dene" butonu otomatik olarak önceki sayfaya döner
 
 **Harita karoları yüklenmiyor:**
 - Emulator dış internete erişemiyorsa MapTiler tile'ları yüklenmez

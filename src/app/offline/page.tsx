@@ -21,7 +21,7 @@ export default function OfflinePage() {
 
         // Gerçek probe: same-origin'e HEAD request
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         const response = await fetch("/", {
           method: "HEAD",
@@ -32,9 +32,14 @@ export default function OfflinePage() {
         clearTimeout(timeoutId);
 
         if (response.ok) {
-          // Host erişilebilir, ana sayfaya yönlendir
+          // Host erişilebilir, geri git veya ana sayfaya yönlendir
           setCanRecover(true);
-          router.replace("/");
+          // history.back() kullanarak istenen sayfaya dön
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            router.replace("/");
+          }
         } else {
           setIsChecking(false);
         }
@@ -49,7 +54,12 @@ export default function OfflinePage() {
 
   const handleRetry = () => {
     setIsChecking(true);
-    window.location.href = "/";
+    // Geri git (istenen sayfaya dön)
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = "/";
+    }
   };
 
   if (isChecking) {

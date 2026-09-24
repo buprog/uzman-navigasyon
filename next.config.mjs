@@ -21,6 +21,34 @@ export default withPWA({
   },
   runtimeCaching: [
     {
+      // Authenticated app routes: daha uzun timeout, offline fallback'i minimize et
+      urlPattern: ({ request, url }) => {
+        const isSameOrigin = self.location.origin === url.origin;
+        const isNavigate = request.mode === "navigate";
+        const pathname = url.pathname;
+        const isAuthRoute = [
+          "/planlayici/",
+          "/turlar/",
+          "/ayarlar",
+          "/rezervasyonlar",
+        ].some((p) => pathname.startsWith(p));
+        return isSameOrigin && isNavigate && isAuthRoute;
+      },
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "auth-pages-cache",
+        networkTimeoutSeconds: 30, // Çok uzun timeout: emulator için
+        expiration: {
+          maxEntries: 30,
+          maxAgeSeconds: 12 * 60 * 60, // 12 hours
+        },
+        cacheWillUpdate: async ({ response }) => {
+          return response && response.status === 200 ? response : null;
+        },
+      },
+    },
+    {
+      // Diğer same-origin navigations (public routes)
       urlPattern: ({ request, url }) => {
         const isSameOrigin = self.location.origin === url.origin;
         const isNavigate = request.mode === "navigate";
@@ -35,7 +63,6 @@ export default withPWA({
           maxAgeSeconds: 24 * 60 * 60, // 1 day
         },
         cacheWillUpdate: async ({ response }) => {
-          // Only cache successful responses
           return response && response.status === 200 ? response : null;
         },
       },
