@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#0f766e"/>
+  <g transform="translate(256,256)">
+    <!-- Harita pin ikonu -->
+    <path d="M 0,-120 C -44,-120 -80,-84 -80,-40 C -80,0 0,100 0,100 C 0,100 80,0 80,-40 C 80,-84 44,-120 0,-120 Z" 
+          fill="#ffffff" stroke="#f8fafc" stroke-width="8"/>
+    <circle cx="0" cy="-40" r="25" fill="#0f766e"/>
+    
+    <!-- Rota çizgisi -->
+    <path d="M -100,40 Q -50,60 0,50 T 100,60" 
+          stroke="#ffffff" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="8,12" opacity="0.9"/>
+    
+    <!-- Küçük i_aretler -->
+    <circle cx="-90" cy="45" r="8" fill="#fbbf24"/>
+    <circle cx="0" cy="50" r="8" fill="#fbbf24"/>
+    <circle cx="90" cy="60" r="8" fill="#fbbf24"/>
+  </g>
+</svg>
