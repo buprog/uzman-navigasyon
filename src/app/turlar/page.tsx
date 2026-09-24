@@ -89,7 +89,14 @@ export default function TurlarPage() {
           <div key={t.id} className="card flex flex-col">
             <div className="flex items-start justify-between gap-2">
               <h2 className="font-semibold text-slate-900">{t.name}</h2>
-              {t.isSample && <span className="badge-basic">Örnek</span>}
+              {t.isSample && (
+                <Link
+                  href={`/planlayici/${t.id}`}
+                  className="inline-flex items-center rounded-full bg-teal-700 px-3 py-1 text-xs font-semibold text-white hover:bg-teal-800 transition"
+                >
+                  Turu gör
+                </Link>
+              )}
             </div>
             <p className="mt-1 text-sm text-slate-500">
               {t.dayCount} gün · {t._count.stops} durak · {t._count.departures} kalkış
@@ -98,7 +105,7 @@ export default function TurlarPage() {
               Güncellendi: {new Date(t.updatedAt).toLocaleString("tr-TR")}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link href={`/planlayici/${t.id}`} className="btn-primary !py-1.5 !text-xs">
+              <Link href={`/planlayici/${t.id}`} className="btn-secondary !py-1.5 !text-xs">
                 Düzenle
               </Link>
               <Link
