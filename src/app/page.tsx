@@ -24,6 +24,18 @@ export default function LandingPage() {
               Giriş yap
             </Link>
           </div>
+          <div className="mt-6 pt-6 border-t border-teal-600/30">
+            <Link
+              href="/cevremde"
+              className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-6 py-3 font-semibold text-white shadow-lg hover:bg-amber-600 transition-colors"
+            >
+              <span className="text-xl">📍</span>
+              Çevremde ne var
+            </Link>
+            <p className="mt-2 text-sm text-teal-100">
+              Acil durum, arıza, konum paylaşımı — yakınımda servis, şarj, sağlık, lokanta
+            </p>
+          </div>
         </div>
       </section>
 

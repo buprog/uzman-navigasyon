@@ -29,6 +29,7 @@ type Props = {
   center?: [number, number];
   zoom?: number;
   mockChargers?: MockCharger[];
+  userLocation?: { lat: number; lng: number } | null;
 };
 
 const TYPE_COLOR: Record<string, string> = {
@@ -149,11 +150,13 @@ export function MapView({
   center = [35.2, 39.0],
   zoom = 5.5,
   mockChargers = [],
+  userLocation = null,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const chargerMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const onClickRef = useRef(onMapClick);
   const routeGenRef = useRef(0);
   const [mapReady, setMapReady] = useState(false);
@@ -232,6 +235,34 @@ export function MapView({
       markersRef.current = [];
       chargerMarkersRef.current.forEach((m) => m.remove());
       chargerMarkersRef.current = [];
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+        userMarkerRef.current = null;
+      }
+
+      // User location marker (distinct, large, pulsing)
+      if (userLocation && Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lng)) {
+        const userEl = document.createElement("div");
+        userEl.style.cssText = `
+          width:36px;
+          height:36px;
+          border-radius:50%;
+          background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          color:#fff;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font:bold 18px sans-serif;
+          border:3px solid #fff;
+          box-shadow:0 2px 8px rgba(0,0,0,.4), 0 0 0 4px rgba(239,68,68,0.2);
+          cursor:pointer;
+        `;
+        userEl.textContent = "📍";
+        userEl.title = "Mevcut konumunuz";
+        userMarkerRef.current = new maplibregl.Marker({ element: userEl })
+          .setLngLat([userLocation.lng, userLocation.lat])
+          .addTo(map);
+      }
 
       const ordered = orderStops(stops);
       const coords: [number, number][] = [];
@@ -273,11 +304,18 @@ export function MapView({
       if (coords.length === 1) {
         map.easeTo({ center: coords[0], zoom: 11 });
       } else if (coords.length > 1) {
-        const bounds = coords.reduce(
+        const allCoords = [...coords];
+        if (userLocation && Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lng)) {
+          allCoords.push([userLocation.lng, userLocation.lat]);
+        }
+        const bounds = allCoords.reduce(
           (b, c) => b.extend(c),
-          new maplibregl.LngLatBounds(coords[0], coords[0])
+          new maplibregl.LngLatBounds(allCoords[0], allCoords[0])
         );
         map.fitBounds(bounds, { padding: 56, maxZoom: 13, duration: 600 });
+      } else if (userLocation && Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lng)) {
+        // Only user location, no stops
+        map.easeTo({ center: [userLocation.lng, userLocation.lat], zoom: 12 });
       }
     };
 
@@ -285,7 +323,7 @@ export function MapView({
     return () => {
       cancelled = true;
     };
-  }, [stops, mockChargers, mapReady]);
+  }, [stops, mockChargers, mapReady, userLocation]);
 
   return (
     <div className={`relative ${className}`} style={{ minHeight: 280 }}>

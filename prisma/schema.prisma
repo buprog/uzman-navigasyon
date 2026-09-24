@@ -26,6 +26,7 @@ model User {
   preferTolls       Boolean  @default(true)
   odometerKm        Int?     // araç km saati
   tireTreadMm       Float?   // diş derinliği mm (öneri stub)
+  autoStopNotifications Boolean @default(true) // oto-duruş POI bildirimleri
   createdAt      DateTime @default(now())
   tours          Tour[]
 }
@@ -89,4 +90,53 @@ model Reservation {
   note        String    @default("")
   status      String    @default("beklemede") // beklemede | onayli | iptal
   createdAt   DateTime  @default(now())
+}
+
+// Yetkili servis noktaları (marka bazlı)
+model AuthorizedService {
+  id       String  @id @default(cuid())
+  brand    String  // Toyota, Volkswagen, Renault, Ford, Hyundai, vb.
+  models   String  @default("") // boş = tüm modeller; virgülle ayrılmış model listesi
+  name     String
+  address  String
+  city     String
+  province String  @default("") // il
+  phone    String
+  website  String  @default("")
+  lat      Float
+  lng      Float
+  notes    String  @default("")
+  source   String  @default("") // veri kaynağı URL (dokümantasyon)
+}
+
+// Şarj istasyonları (hibrit/elektrikli araçlar için)
+model ChargingStation {
+  id         String  @id @default(cuid())
+  name       String
+  network    String  @default("") // ZES, Trugo, Eşarj, vb.
+  address    String
+  city       String
+  province   String  @default("")
+  lat        Float
+  lng        Float
+  connectors String  @default("") // Type 2, CCS, CHAdeMO, vb.
+  phone      String  @default("")
+  notes      String  @default("")
+  source     String  @default("")
+}
+
+// İlgi çekici noktalar (POI) - lokanta, otel, eğlence, sağlık
+model POI {
+  id          String  @id @default(cuid())
+  category    String  // restaurant | hotel | entertainment | health
+  name        String
+  address     String
+  city        String
+  province    String  @default("")
+  phone       String  @default("")
+  lat         Float
+  lng         Float
+  isEmergency Boolean @default(false) // acil servis / 112 (sadece sağlık kategorisi için)
+  notes       String  @default("")
+  source      String  @default("")
 }

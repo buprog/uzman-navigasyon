@@ -30,6 +30,7 @@ type VehicleForm = {
   preferTolls: boolean;
   odometerKm: string;
   tireTreadMm: string;
+  autoStopNotifications: boolean;
 };
 
 const emptyVehicle: VehicleForm = {
@@ -42,6 +43,7 @@ const emptyVehicle: VehicleForm = {
   preferTolls: true,
   odometerKm: "",
   tireTreadMm: "",
+  autoStopNotifications: true,
 };
 
 export default function AyarlarPage() {
@@ -76,6 +78,7 @@ export default function AyarlarPage() {
           preferTolls: v.preferTolls !== false,
           odometerKm: v.odometerKm != null ? String(v.odometerKm) : "",
           tireTreadMm: v.tireTreadMm != null ? String(v.tireTreadMm) : "",
+          autoStopNotifications: v.autoStopNotifications !== false,
         });
       });
   }, [router]);
@@ -156,6 +159,7 @@ export default function AyarlarPage() {
           vehicle.odometerKm === "" ? null : Number(vehicle.odometerKm),
         tireTreadMm:
           vehicle.tireTreadMm === "" ? null : Number(vehicle.tireTreadMm),
+        autoStopNotifications: vehicle.autoStopNotifications,
       }),
     });
     const data = await res.json();
@@ -335,6 +339,18 @@ export default function AyarlarPage() {
               }
             />
             Paralı yolları tercih et (ücret / trafik API yok — yakında)
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={vehicle.autoStopNotifications}
+              onChange={(e) =>
+                setVehicle((p) => ({ ...p, autoStopNotifications: e.target.checked }))
+              }
+            />
+            <span>
+              <strong>Oto-duruş bildirimleri</strong> — aracım durduğunda "Çevremde ne var" otomatik göster
+            </span>
           </label>
           <button type="submit" className="btn-primary" disabled={savingVehicle}>
             {savingVehicle ? "Kaydediliyor…" : "Araç profilini kaydet"}
