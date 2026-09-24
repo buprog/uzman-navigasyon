@@ -1,15 +1,17 @@
 /**
- * Payment configuration - placeholder prices, easy to update
+ * Payment configuration - placeholder prices, easy to update in ONE PLACE
  * Real payment provider (iyzico/Stripe) can be plugged in later
+ * 
+ * PREMIUM PACKAGE: YEARLY/SENELIK ONLY
  */
 
 export const PAYMENT_CONFIG = {
   yearly: {
-    price: 600.00,
-    campaignPrice: 360.00, // 40% discount
-    campaignDays: 15, // Campaign valid for 15 days from first sign-up/payment view
+    price: 600.00,            // ₺600/yıl - Normal fiyat (değiştirilebilir)
+    campaignPrice: 360.00,    // ₺360/yıl - Kampanya fiyatı (%40 indirim)
+    campaignDays: 15,         // İlk 15 gün kampanya geçerli
     currency: "TRY",
-    period: "Yıllık",
+    period: "Yıllık / Senelik",
     periodDescription: "Yılda bir otomatik yenilenir",
     campaignBadge: "%40 kampanya",
   },

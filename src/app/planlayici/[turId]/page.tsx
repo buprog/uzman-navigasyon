@@ -18,6 +18,7 @@ import {
   mockTireServiceOffers,
 } from "@/lib/driverAssistStubs";
 import { checkTrialResetParam, isTrialActive } from "@/lib/trial";
+import { TrialEndNotification } from "@/components/TrialEndNotification";
 
 type Stop = {
   id: string;
@@ -915,6 +916,9 @@ export default function PlanlayiciPage() {
           </form>
         </div>
       )}
+      
+      {/* Trial end notification - shown once */}
+      <TrialEndNotification />
     </div>
   );
 }

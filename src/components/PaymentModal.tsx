@@ -234,7 +234,12 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
               </p>
             </div>
             
-            <h2 className="text-xl font-bold mb-4">Premium Yıllık Plan</h2>
+            <h2 className="text-xl font-bold mb-2">Premium Paketi</h2>
+            <p className="text-sm text-slate-600 mb-4">
+              <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800">
+                Yıllık / Senelik
+              </span>
+            </p>
             
             <div className="mb-6 rounded-lg border-2 border-teal-600 bg-teal-50 p-4">
               <div className="flex items-center justify-between mb-2">

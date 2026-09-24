@@ -5,31 +5,35 @@
 
 const TRIAL_KEY = "un_first_trip_trial";
 const TRIAL_COMPLETED_KEY = "un_trial_completed";
+const TRIAL_NOTIFICATION_SHOWN_KEY = "un_trial_notification_shown";
 
 export type TrialState = {
   active: boolean;
   completedAt: string | null;
+  notificationShown: boolean;
 };
 
 export function getTrialState(): TrialState {
   if (typeof window === "undefined") {
-    return { active: true, completedAt: null };
+    return { active: true, completedAt: null, notificationShown: false };
   }
 
   try {
     const completed = localStorage.getItem(TRIAL_COMPLETED_KEY);
+    const notificationShown = localStorage.getItem(TRIAL_NOTIFICATION_SHOWN_KEY) === "true";
+    
     if (completed) {
-      return { active: false, completedAt: completed };
+      return { active: false, completedAt: completed, notificationShown };
     }
 
     const trial = localStorage.getItem(TRIAL_KEY);
     if (trial === "false") {
-      return { active: false, completedAt: null };
+      return { active: false, completedAt: null, notificationShown };
     }
 
-    return { active: true, completedAt: null };
+    return { active: true, completedAt: null, notificationShown: false };
   } catch {
-    return { active: true, completedAt: null };
+    return { active: true, completedAt: null, notificationShown: false };
   }
 }
 
@@ -55,7 +59,20 @@ export function resetTrial() {
   try {
     localStorage.removeItem(TRIAL_KEY);
     localStorage.removeItem(TRIAL_COMPLETED_KEY);
+    localStorage.removeItem(TRIAL_NOTIFICATION_SHOWN_KEY);
   } catch {}
+}
+
+export function markNotificationShown() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(TRIAL_NOTIFICATION_SHOWN_KEY, "true");
+  } catch {}
+}
+
+export function shouldShowNotification(): boolean {
+  const state = getTrialState();
+  return !state.active && !state.notificationShown;
 }
 
 export function isTrialActive(): boolean {
