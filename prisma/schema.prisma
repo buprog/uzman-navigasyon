@@ -96,13 +96,38 @@ model DeviceIdentity {
   deviceId           String   @unique // persistent random ID (localStorage + cookie)
   fingerprintHash    String?  // lightweight browser fingerprint (fallback)
   firstSeenAt        DateTime @default(now())
-  campaignStartedAt  DateTime? // 15-day campaign window start
-  campaignUsed       Boolean  @default(false)
-  premiumExpiresAt   DateTime? // premium subscription expiry
+  campaignStartedAt  DateTime? // 15-day campaign window start (DEPRECATED - use EmailIdentity)
+  campaignUsed       Boolean  @default(false) // DEPRECATED - use EmailIdentity
+  premiumExpiresAt   DateTime? // premium subscription expiry (DEPRECATED - use EmailIdentity)
   linkedUserIds      String[] // users signed up from this device
   lastSeenAt         DateTime @default(now())
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
   @@index([fingerprintHash])
+}
+
+model EmailIdentity {
+  id                 String   @id @default(cuid())
+  emailNormalized    String   @unique // trim().toLowerCase()
+  firstRegisteredAt  DateTime @default(now())
+  campaignStartedAt  DateTime @default(now()) // 15-day window per email
+  campaignUsed       Boolean  @default(false)
+  premiumExpiresAt   DateTime? // premium subscription expiry per email
+  linkedUserIds      String[] // users with this email (survives deletion/recreation)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model EmailVerificationCode {
+  id        String   @id @default(cuid())
+  email     String   // not normalized for display
+  code      String   // 6-digit code
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, code])
+  @@index([expiresAt])
 }

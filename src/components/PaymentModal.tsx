@@ -13,7 +13,7 @@ type Props = {
 
 export function PaymentModal({ onClose, onPaymentComplete }: Props) {
   const router = useRouter();
-  const [step, setStep] = useState<"auth" | "payment">("auth");
+  const [step, setStep] = useState<"auth" | "verify" | "payment">("auth");
   const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -21,6 +21,9 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
   const [userEmail, setUserEmail] = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [campaignEligible, setCampaignEligible] = useState(false);
+  const [campaignDaysLeft, setCampaignDaysLeft] = useState(0);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
   
   useEffect(() => {
     async function checkDevice() {

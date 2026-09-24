@@ -1,19 +1,28 @@
 /**
- * Payment configuration - placeholder prices, easy to update in ONE PLACE
+ * Payment configuration - ALL PRICING CONSTANTS IN ONE PLACE
  * Real payment provider (iyzico/Stripe) can be plugged in later
  * 
  * PREMIUM PACKAGE: YEARLY/SENELIK ONLY
  */
 
+// Core pricing constants
+export const NORMAL_PRICE_TRY = 600;      // Normal yearly price
+export const CAMPAIGN_DISCOUNT = 0.40;    // 40% discount
+export const CAMPAIGN_DAYS = 15;          // Campaign valid for 15 days per email
+
+// Derived values
+const CAMPAIGN_PRICE_TRY = NORMAL_PRICE_TRY * (1 - CAMPAIGN_DISCOUNT);
+
 export const PAYMENT_CONFIG = {
   yearly: {
-    price: 600.00,            // ₺600/yıl - Normal fiyat (değiştirilebilir)
-    campaignPrice: 360.00,    // ₺360/yıl - Kampanya fiyatı (%40 indirim)
-    campaignDays: 15,         // İlk 15 gün kampanya geçerli
+    price: NORMAL_PRICE_TRY,
+    campaignPrice: CAMPAIGN_PRICE_TRY,
+    campaignDays: CAMPAIGN_DAYS,
+    campaignDiscount: CAMPAIGN_DISCOUNT,
     currency: "TRY",
     period: "Yıllık / Senelik",
     periodDescription: "Yılda bir otomatik yenilenir",
-    campaignBadge: "%40 kampanya",
+    campaignBadge: `%${(CAMPAIGN_DISCOUNT * 100).toFixed(0)} kampanya`,
   },
 } as const;
 
