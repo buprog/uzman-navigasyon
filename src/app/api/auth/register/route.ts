@@ -52,7 +52,7 @@ export async function POST(req: Request) {
         passwordHash: await hashPassword(password),
         consentGiven,
         consentTimestamp: consentGiven ? new Date() : null,
-        consentTextVersion: consentGiven ? "v1.2" : null,
+        consentTextVersion: consentGiven ? "v1.3" : null,
       },
     });
 

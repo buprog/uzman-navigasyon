@@ -26,6 +26,7 @@ export default function KVKKPage() {
             <li><strong>Anonim cihaz kimliği</strong>: İlk yolculuk deneme süresi takibi (localStorage + cookie)</li>
             <li><strong>Tarayıcı parmak izi özeti (hash)</strong>: Yedek cihaz tanıma (sadece özet saklanır, ham sinyal yok)</li>
             <li><strong>Abonelik/ödeme kayıtları</strong>: Premium durum, kampanya kullanımı, ödeme tarihi ve tutarı (test ödemesi)</li>
+            <li><strong>Yaklaşık konum bilgisi</strong> (opsiyonel, izin vermeniz halinde): Hava durumuna göre tema ayarlaması ve navigasyon amacıyla. Konum bilgisi sunucularda saklanmaz, yalnızca hava durumu API sorgusunda kullanılır ve koordinatlar 2 ondalık basamağa yuvarlanır (~1km hassasiyet).</li>
           </ul>
           <p className="text-slate-700 mt-3">
             <strong>İşlenmeyenler</strong>: IMEI, telefon numarası, kesin konum verisi (sunucuda saklanmaz).
@@ -41,6 +42,7 @@ export default function KVKKPage() {
             <li>Size uygun reklam ve içerik gösterimi (cinsiyet bilgisi belirtildiyse ve rıza verdiyseniz)</li>
             <li>İlk yolculuk deneme süresi takibi (cihaz bazlı, anonim)</li>
             <li>Kampanya uygunluğu kontrolü (e-posta bazlı, 15 günlük pencere)</li>
+            <li>Hava durumuna göre tema ve navigasyon (izin vermeniz halinde, yaklaşık konum bilginiz işlenir; konum bilginiz sunucularda saklanmaz)</li>
             <li>Müşteri destek ve iletişim</li>
           </ul>
         </section>
@@ -130,9 +132,23 @@ export default function KVKKPage() {
         </section>
 
         <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-3">11. Konum Bilgisi İşleme</h2>
+          <p className="text-slate-700 mb-2">
+            Hava durumuna göre tema özelliği etkinleştirildiğinde:
+          </p>
+          <ul className="list-disc pl-6 text-slate-700">
+            <li>Tarayıcınızın konum izni istenir (isteğe bağlı, reddedebilirsiniz)</li>
+            <li>İzin verirseniz, yaklaşık konumunuz (2 ondalık basamağa yuvarlanmış koordinatlar) hava durumu API'sinden veri çekmek için kullanılır</li>
+            <li><strong>Konum bilginiz sunucularda saklanmaz</strong>, yalnızca hava durumu sorgusu için API'ye iletilir</li>
+            <li>Hava durumu sonucu cihazınızda (localStorage) yaklaşık 30 dakika önbelleğe alınır</li>
+            <li>Bu özelliği dilediğiniz zaman ayarlardan kapatabilirsiniz</li>
+          </ul>
+        </section>
+
+        <section className="mb-8">
           <p className="text-sm text-slate-500">
             <strong>Son güncelleme</strong>: 24 Eylül 2026<br />
-            <strong>Metin versiyonu</strong>: v1.2
+            <strong>Metin versiyonu</strong>: v1.3
           </p>
         </section>
       </div>

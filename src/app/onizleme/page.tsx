@@ -5,13 +5,15 @@ import { useState } from "react";
 type DeviceType = "iphone" | "android";
 type ThemePreview = "female" | "male" | "neutral";
 type ModePreview = "light" | "dark" | "system";
+type WeatherPreview = "none" | "clear" | "cloudy" | "rain" | "snow";
 
 export default function PreviewPage() {
   const [device, setDevice] = useState<DeviceType>("iphone");
   const [themePreview, setThemePreview] = useState<ThemePreview>("neutral");
   const [modePreview, setModePreview] = useState<ModePreview>("system");
+  const [weatherPreview, setWeatherPreview] = useState<WeatherPreview>("none");
   
-  const iframeUrl = `/?previewTheme=${themePreview}&previewMode=${modePreview}`;
+  const iframeUrl = `/?previewTheme=${themePreview}&previewMode=${modePreview}&previewWeather=${weatherPreview}`;
   
   // Device dimensions
   const dimensions = {
@@ -155,11 +157,70 @@ export default function PreviewPage() {
               </div>
             </div>
 
+            {/* Weather simulator */}
+            <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+              <h3 className="text-sm font-semibold text-white mb-3">
+                Hava Durumu Taklidi
+              </h3>
+              <div className="space-y-2">
+                <button
+                  onClick={() => setWeatherPreview("none")}
+                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
+                    weatherPreview === "none"
+                      ? "bg-slate-600 text-white"
+                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
+                >
+                  🚫 Yok
+                </button>
+                <button
+                  onClick={() => setWeatherPreview("clear")}
+                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
+                    weatherPreview === "clear"
+                      ? "bg-amber-600 text-white"
+                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
+                >
+                  ☀️ Güneşli
+                </button>
+                <button
+                  onClick={() => setWeatherPreview("cloudy")}
+                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
+                    weatherPreview === "cloudy"
+                      ? "bg-gray-600 text-white"
+                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
+                >
+                  ☁️ Bulutlu
+                </button>
+                <button
+                  onClick={() => setWeatherPreview("rain")}
+                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
+                    weatherPreview === "rain"
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
+                >
+                  🌧️ Yağmurlu
+                </button>
+                <button
+                  onClick={() => setWeatherPreview("snow")}
+                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
+                    weatherPreview === "snow"
+                      ? "bg-cyan-600 text-white"
+                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
+                >
+                  ❄️ Karlı
+                </button>
+              </div>
+            </div>
+
             {/* Info */}
             <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
               <p className="text-xs text-slate-400">
-                💡 Tema ve mod taklidi gerçek hesap verilerinizi değiştirmez, sadece önizleme içindir.
-                Tüm 6 kombinasyonu (3 tema × 2 mod) test edebilirsiniz.
+                💡 Tema, mod ve hava durumu taklidi gerçek hesap verilerinizi değiştirmez, sadece önizleme içindir.
+                Tüm kombinasyonları (3 tema × 2 mod × 5 hava) test edebilirsiniz.
               </p>
             </div>
           </div>
@@ -190,7 +251,7 @@ export default function PreviewPage() {
 
               {/* iframe */}
               <iframe
-                key={`${device}-${themePreview}-${modePreview}`}
+                key={`${device}-${themePreview}-${modePreview}-${weatherPreview}`}
                 src={iframeUrl}
                 className="w-full h-full rounded-[2.5rem] bg-white"
                 style={{

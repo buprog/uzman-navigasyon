@@ -321,7 +321,7 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
                         className="mt-0.5 w-4 h-4 text-teal-700 rounded focus:ring-teal-500"
                       />
                       <span className="text-[11px] text-slate-700">
-                        Cihaz kimliğim, e-posta adresim ve (belirttiysem) cinsiyet bilgimin abonelik yönetimi, hizmet kişiselleştirme ve size uygun reklam/içerik gösterimi amacıyla işlenmesine açık rıza veriyorum.{" "}
+                        Cihaz kimliğim, e-posta adresim, (belirttiysem) cinsiyet bilgimin ve (izin verirsem) yaklaşık konum bilgimin abonelik yönetimi, hizmet kişiselleştirme, hava durumuna göre tema ve size uygun reklam/içerik gösterimi amacıyla işlenmesine açık rıza veriyorum. Konum bilgim sunucularda saklanmaz.{" "}
                         <a href="/kvkk" target="_blank" className="text-teal-700 underline font-semibold">
                           KVKK Aydınlatma Metni
                         </a>

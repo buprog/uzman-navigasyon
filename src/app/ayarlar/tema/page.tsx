@@ -7,11 +7,14 @@ import { THEME_LABELS, MODE_LABELS } from "@/lib/theme";
 type ThemePreference = "neutral" | "female" | "male" | null;
 type ColorModePreference = "light" | "dark" | null;
 
+const LOCATION_PERMISSION_SHOWN_KEY = "un_weather_permission_shown";
+
 export default function ThemeSettingsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<ThemePreference>(null);
   const [currentMode, setCurrentMode] = useState<ColorModePreference>(null);
+  const [weatherThemeEnabled, setWeatherThemeEnabled] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -23,6 +26,14 @@ export default function ThemeSettingsPage() {
           const data = await res.json();
           setCurrentTheme(data.user?.themePreference || null);
           setCurrentMode(data.user?.colorModePreference || null);
+          setWeatherThemeEnabled(data.user?.weatherThemeEnabled || false);
+        } else {
+          // Guest user - check cookie
+          const guestEnabled = document.cookie
+            .split(";")
+            .find((c) => c.trim().startsWith("un_weather_theme="))
+            ?.split("=")[1] === "true";
+          setWeatherThemeEnabled(guestEnabled);
         }
       } catch (err) {
         console.error("Failed to fetch user:", err);
@@ -80,6 +91,70 @@ export default function ThemeSettingsPage() {
       }
     } catch (err) {
       setMessage("❌ Görünüm güncellenemedi");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleWeatherThemeChange(enabled: boolean) {
+    setLoading(true);
+    setMessage("");
+
+    // If enabling, request location permission
+    if (enabled && navigator.geolocation) {
+      try {
+        // Check if permission was already shown
+        const alreadyShown = localStorage.getItem(LOCATION_PERMISSION_SHOWN_KEY);
+        
+        if (!alreadyShown) {
+          // Request permission
+          await new Promise<void>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+              () => {
+                localStorage.setItem(LOCATION_PERMISSION_SHOWN_KEY, "true");
+                resolve();
+              },
+              (error) => {
+                if (error.code === error.PERMISSION_DENIED) {
+                  setMessage("❌ Konum izni verilmedi. Hava durumu teması kullanılamaz.");
+                  setLoading(false);
+                  reject(error);
+                } else {
+                  // Other errors (timeout, unavailable) - proceed anyway
+                  resolve();
+                }
+              },
+              { timeout: 5000 }
+            );
+          });
+        }
+      } catch (err) {
+        return; // Exit if permission denied
+      }
+    }
+
+    try {
+      const res = await fetch("/api/account/weather-theme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+
+      if (res.ok) {
+        setWeatherThemeEnabled(enabled);
+        setMessage(
+          enabled
+            ? "✅ Hava durumu teması açıldı"
+            : "✅ Hava durumu teması kapatıldı"
+        );
+        setTimeout(() => {
+          router.refresh();
+        }, 500);
+      } else {
+        setMessage("❌ Hava durumu teması güncellenemedi");
+      }
+    } catch (err) {
+      setMessage("❌ Hava durumu teması güncellenemedi");
     } finally {
       setLoading(false);
     }
@@ -197,13 +272,44 @@ export default function ThemeSettingsPage() {
         </div>
       </div>
 
+      {/* Weather Theme Toggle */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
+        <h2 className="text-lg font-semibold text-slate-900 mb-3">Hava Durumu Teması</h2>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-4 rounded-lg border-2 border-slate-200">
+            <div className="flex-1">
+              <p className="font-semibold text-slate-900">Havaya göre tema</p>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Bulunduğunuz yerin hava durumuna göre tema renklerini uyarla
+              </p>
+            </div>
+            <button
+              onClick={() => handleWeatherThemeChange(!weatherThemeEnabled)}
+              disabled={loading}
+              className={`relative w-14 h-8 rounded-full transition ${
+                weatherThemeEnabled ? "bg-teal-700" : "bg-slate-300"
+              }`}
+            >
+              <span
+                className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
+                  weatherThemeEnabled ? "translate-x-6" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="mt-6 rounded-lg bg-slate-50 border border-slate-200 p-4">
         <p className="text-xs text-slate-600 mb-2">
           💡 <strong>Görünüm:</strong> "Sistem" seçeneği, işletim sisteminizin karanlık/açık mod tercihini takip eder ve OS değişikliklerine anında tepki verir.
         </p>
-        <p className="text-xs text-slate-600">
+        <p className="text-xs text-slate-600 mb-2">
           💡 <strong>Tema:</strong> Otomatik tema, kayıt sırasında seçtiğiniz cinsiyete göre belirlenir.
           Misafir kullanıcılar için varsayılan nötr tema uygulanır.
+        </p>
+        <p className="text-xs text-slate-600">
+          💡 <strong>Hava durumu teması:</strong> Açıldığında, konum izniniz ile bulunduğunuz yerdeki hava durumuna göre tema renkleri uyarlanır. Güneşli hava = daha canlı renkler, yağmurlu/bulutlu hava = daha koyu/soğuk tonlar. Konum bilginiz sunucularda saklanmaz.
         </p>
       </div>
     </div>

@@ -61,6 +61,7 @@ export async function getSessionUser() {
       gender: true,
       themePreference: true,
       colorModePreference: true,
+      weatherThemeEnabled: true,
     },
   });
 }
