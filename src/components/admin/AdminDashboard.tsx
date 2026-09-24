@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { AdsTab } from "./AdsTab";
 import { SettingsTab } from "./SettingsTab";
 
@@ -11,11 +11,13 @@ type Props = {
 
 export function AdminDashboard({ adminEmail }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const [activeTab, setActiveTab] = useState<"ads" | "settings">("ads");
 
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
-    router.push("/yonetim/giris");
+    // Redirect to login page (same path with /giris)
+    router.push(pathname + '/giris');
   }
 
   return (

@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "./prisma";
+import { getAdminPath } from "./adminPath";
 
 const ADMIN_COOKIE = "un_admin";
 const SECRET = process.env.AUTH_SECRET || "uzman-navigasyon-dev-secret-change-me";
@@ -41,17 +42,22 @@ export function verifyAdminCredentials(email: string, password: string): boolean
 export async function createAdminSession(email: string) {
   const payload = `${email}.${Date.now()}`;
   const token = `${payload}.${sign(payload)}`;
+  const adminPath = getAdminPath();
+  const cookiePath = adminPath ? `/${adminPath}` : '/';
+  
   cookies().set(ADMIN_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    path: "/yonetim",
-    maxAge: 60 * 60 * 2, // 2 hours (short-lived)
+    path: cookiePath,
+    maxAge: 60 * 60 * 1, // 1 hour (short-lived)
   });
 }
 
 export async function destroyAdminSession() {
-  cookies().set(ADMIN_COOKIE, "", { httpOnly: true, path: "/yonetim", maxAge: 0 });
+  const adminPath = getAdminPath();
+  const cookiePath = adminPath ? `/${adminPath}` : '/';
+  cookies().set(ADMIN_COOKIE, "", { httpOnly: true, path: cookiePath, maxAge: 0 });
 }
 
 export async function getAdminSession(): Promise<string | null> {

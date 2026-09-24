@@ -1,12 +1,16 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
-export default function AdminLoginPage() {
+export default function InternalAdminLoginPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Determine the dashboard path from current pathname
+  const dashboardPath = pathname.replace('/giris', '');
 
   async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -31,7 +35,7 @@ export default function AdminLoginPage() {
       return;
     }
 
-    router.push("/yonetim");
+    router.push(dashboardPath);
   }
 
   return (
