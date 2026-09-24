@@ -3,7 +3,7 @@
  * The admin panel is served under a secret path from ADMIN_PATH env var
  */
 
-const ADMIN_PATH_REGEX = /^[a-z0-9-]{10,64}$/;
+const ADMIN_PATH_REGEX = /^[a-z0-9-]{8,64}$/;
 
 /**
  * Get and validate the admin path from environment
@@ -17,7 +17,7 @@ export function getAdminPath(): string | null {
   }
   
   if (!ADMIN_PATH_REGEX.test(path)) {
-    console.error('ADMIN_PATH is invalid. Must match ^[a-z0-9-]{10,64}$');
+    console.error('ADMIN_PATH is invalid. Must match ^[a-z0-9-]{8,64}$');
     return null;
   }
   

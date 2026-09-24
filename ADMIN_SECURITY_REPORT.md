@@ -10,9 +10,9 @@ The admin panel is not accessible at any predictable or guessable URLs. Instead,
 
 **Configuration:**
 - **Environment Variable**: `ADMIN_PATH`
-- **Format**: Must match `^[a-z0-9-]{10,64}$` (10-64 characters, lowercase letters, numbers, and hyphens)
-- **Style**: English-looking meaningless slug (e.g., `vault-xxxx` format)
-- **Example**: `vault-7f3a9x2b8c4d1e5f6g7h`
+- **Format**: Must match `^[a-z0-9-]{8,64}$` (8-64 characters, lowercase letters, numbers, and hyphens)
+- **Style**: English-looking meaningless slug
+- **Production**: Real value already set in Vercel env vars (never hardcode)
 - **Validation**: Invalid or missing values result in the admin panel being completely disabled (404)
 
 **Implementation:**
@@ -121,7 +121,7 @@ Comprehensive HTTP security headers applied to all admin responses.
 ## Environment Variables
 
 **Required (for admin access):**
-- `ADMIN_PATH` - Secret path (10-64 chars, `^[a-z0-9-]{10,64}$`, English-looking format like `vault-xxxx`)
+- `ADMIN_PATH` - Secret path (8-64 chars, `^[a-z0-9-]{8,64}$`, English-looking slug, already set in production)
 - `ADMIN_BASIC_USER` - HTTP Basic Auth username
 - `ADMIN_BASIC_PASSWORD` - HTTP Basic Auth password
 - `ADMIN_EMAIL` - Admin login email
@@ -133,7 +133,8 @@ Comprehensive HTTP security headers applied to all admin responses.
 **Example `.env` configuration:**
 ```bash
 # Admin panel - all fields required except IP allowlist
-ADMIN_PATH="vault-7f3a9x2b8c4d1e5f6g7h"
+# ADMIN_PATH is already set in Vercel (never hardcode)
+ADMIN_PATH=""
 ADMIN_BASIC_USER="admin"
 ADMIN_BASIC_PASSWORD="strong-basic-password-here"
 ADMIN_EMAIL="admin@example.com"
@@ -369,10 +370,10 @@ Referrer-Policy: no-referrer
 
 **Problem**: Admin panel returns 404 even at secret path
 **Solution**: 
-- Verify `ADMIN_PATH` is set and valid (10-64 chars, `^[a-z0-9-]{10,64}$`)
+- Verify `ADMIN_PATH` is set and valid (8-64 chars, `^[a-z0-9-]{8,64}$`)
 - Check server logs for validation errors
-- Ensure all required env vars are set
-- Try a different path format (e.g., `vault-` prefix followed by random chars)
+- Ensure all required env vars are set in Vercel dashboard
+- Production value is already configured (check Vercel env vars)
 
 **Problem**: Basic Auth keeps prompting
 **Solution**:
