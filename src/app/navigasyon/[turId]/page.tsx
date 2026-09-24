@@ -117,7 +117,7 @@ export default function NavigasyonPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="flex h-[calc(100dvh-57px)] items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="mb-4 text-4xl">🗺️</div>
           <p className="text-sm text-slate-500">Navigasyon hazırlanıyor…</p>
@@ -128,7 +128,7 @@ export default function NavigasyonPage() {
 
   if (error || !tour) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 p-6">
+      <div className="flex h-[calc(100dvh-57px)] items-center justify-center bg-slate-50 p-6">
         <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
           <h2 className="text-xl font-bold text-red-600">Hata</h2>
           <p className="mt-3 text-sm text-slate-600">
@@ -160,7 +160,7 @@ export default function NavigasyonPage() {
 
   if (activeStops.length < 2) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 p-6">
+      <div className="flex h-[calc(100dvh-57px)] items-center justify-center bg-slate-50 p-6">
         <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
           <h2 className="text-xl font-bold text-amber-600">Yetersiz Durak</h2>
           <p className="mt-3 text-sm text-slate-600">
