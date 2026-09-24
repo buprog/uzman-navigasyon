@@ -61,8 +61,16 @@ Gerçek 112 SMS, canlı trafik, ücretli harita API’si, partner teklifi **yok*
 - Next.js 14 (App Router) + TypeScript + Tailwind
 - MapLibre GL + ücretsiz OSM karoları
 - Ücretsiz geocoding: OpenStreetMap Nominatim (sunucu proxy `/api/geo/search` + `/api/geo/reverse`; ücretli API yok)
-- SQLite + Prisma (Docker yok)
+- **PostgreSQL** + Prisma (Production: Neon/Vercel Postgres; Local dev: SQLite veya PostgreSQL)
 - Cookie oturum + bcrypt (e-posta/şifre)
+
+## Production Deployment
+
+**Vercel'e deploy etmek için:** [DEPLOY.md](./DEPLOY.md) dosyasını okuyun.
+
+Vercel production ortamı için PostgreSQL gereklidir (SQLite dosya tabanlı olduğu için serverless ortamda çalışmaz).
+
+Önerilen: **Neon** (ücretsiz PostgreSQL) + Vercel.
 
 ## Kurulum
 
@@ -86,6 +94,16 @@ npm run dev
 Tarayıcı: [http://localhost:3000](http://localhost:3000)
 
 Demo hesap: `operator@demo.com` / `demo1234` (Basic) — seed sonrası geçerli; `db:seed` şifreyi yeniden yazar.
+
+**Not:** Lokal development'ta SQLite kullanmak için `.env` dosyasını manuel oluşturun:
+```bash
+cat > .env << 'EOF'
+DATABASE_URL="file:./dev.db"
+AUTH_SECRET="dev-secret-change-in-production"
+EOF
+```
+
+Production deployment için PostgreSQL gereklidir. Detaylı bilgi: [DEPLOY.md](./DEPLOY.md)
 
 ## Kapsam dışı (v1)
 
