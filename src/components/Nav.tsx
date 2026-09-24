@@ -29,14 +29,17 @@ export function Nav() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      
+      // Avatar dropdown: close only if outside BOTH desktop and mobile refs
+      const inAvatar = [dropdownRef, mobileAvatarRef].some(r => r.current?.contains(target));
+      if (!inAvatar) {
         setDropdownOpen(false);
       }
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+      
+      // Hamburger menu: separate check
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(target)) {
         setMobileMenuOpen(false);
-      }
-      if (mobileAvatarRef.current && !mobileAvatarRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
       }
     }
     if (dropdownOpen || mobileMenuOpen) {

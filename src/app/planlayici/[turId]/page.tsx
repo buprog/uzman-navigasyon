@@ -292,7 +292,7 @@ export default function PlanlayiciPage() {
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* PLAN panel */}
-        <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-80 lg:border-b-0 lg:border-r print:w-full">
+        <aside className="flex w-full shrink-0 flex-col overflow-y-auto border-b border-slate-200 bg-white lg:w-80 lg:overflow-y-visible lg:border-b-0 lg:border-r print:w-full">
           <div className="border-b border-slate-100 p-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
