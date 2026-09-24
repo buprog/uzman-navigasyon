@@ -135,6 +135,13 @@ export function Nav() {
                           Premium&apos;a yükselt
                         </Link>
                       )}
+                      <Link
+                        href="/ayarlar/tema"
+                        className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        🎨 Tema
+                      </Link>
                       <button
                         onClick={logout}
                         className="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition"

@@ -52,7 +52,15 @@ export async function getSessionUser() {
   if (!userId) return null;
   return prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, name: true, companyName: true, plan: true },
+    select: { 
+      id: true, 
+      email: true, 
+      name: true, 
+      companyName: true, 
+      plan: true,
+      gender: true,
+      themePreference: true,
+    },
   });
 }
 

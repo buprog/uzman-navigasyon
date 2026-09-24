@@ -17,6 +17,7 @@ model User {
   authProvider   String   @default("credentials") // credentials | google (future)
   googleSub      String?  @unique // future Google subject id
   gender         String   @default("UNSPECIFIED") // MALE | FEMALE | UNSPECIFIED
+  themePreference String?  // null = automatic (based on gender), or: neutral | female | male
   // KVKK compliance
   consentGiven      Boolean  @default(false)
   consentTimestamp  DateTime?

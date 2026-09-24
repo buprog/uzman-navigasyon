@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Gender-based themes */
+@import '../styles/themes.css';
+
 :root {
   --brand: #0f766e;
   --brand-dark: #115e59;

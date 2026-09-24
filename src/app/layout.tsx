@@ -3,6 +3,8 @@ import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { AdBanner } from "@/components/AdBanner";
+import { getSessionUser } from "@/lib/auth";
+import { getServerTheme } from "@/lib/theme.server";
 
 export const metadata: Metadata = {
   title: "Uzman Navigasyon",
@@ -33,9 +35,29 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ 
+  children,
+  params,
+  searchParams,
+}: { 
+  children: React.ReactNode;
+  params?: any;
+  searchParams?: { previewTheme?: string };
+}) {
+  // Resolve theme server-side to prevent flash
+  const user = await getSessionUser();
+  const previewTheme = searchParams?.previewTheme;
+  
+  const theme = getServerTheme(
+    user ? {
+      gender: user.gender as "MALE" | "FEMALE" | "UNSPECIFIED",
+      themePreference: user.themePreference as "neutral" | "female" | "male" | null,
+    } : undefined,
+    previewTheme
+  );
+
   return (
-    <html lang="tr">
+    <html lang="tr" data-theme={theme}>
       <body>
         <Nav />
         <InstallPrompt />
