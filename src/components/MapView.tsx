@@ -25,10 +25,13 @@ type Props = {
   stops: MapStop[];
   interactive?: boolean;
   onMapClick?: (lat: number, lng: number) => void;
+  onMapTap?: () => void;
   className?: string;
   center?: [number, number];
   zoom?: number;
   mockChargers?: MockCharger[];
+  mapRef?: React.MutableRefObject<maplibregl.Map | null>;
+  showAttribution?: boolean;
 };
 
 const TYPE_COLOR: Record<string, string> = {
@@ -145,21 +148,27 @@ export function MapView({
   stops,
   interactive = true,
   onMapClick,
+  onMapTap,
   className = "h-full w-full",
   center = [35.2, 39.0],
   zoom = 5.5,
   mockChargers = [],
+  mapRef: externalMapRef,
+  showAttribution = true,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  const internalMapRef = useRef<maplibregl.Map | null>(null);
+  const mapRef = externalMapRef || internalMapRef;
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const chargerMarkersRef = useRef<maplibregl.Marker[]>([]);
   const onClickRef = useRef(onMapClick);
+  const onTapRef = useRef(onMapTap);
   const routeGenRef = useRef(0);
   const [mapReady, setMapReady] = useState(false);
+  const clickStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   onClickRef.current = onMapClick;
+  onTapRef.current = onMapTap;
 
-  // Create map once
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = new maplibregl.Map({
@@ -175,7 +184,7 @@ export function MapView({
               "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
             ],
             tileSize: 256,
-            attribution: "© OpenStreetMap",
+            attribution: "© OpenStreetMap | MapLibre",
           },
         },
         layers: [{ id: "osm", type: "raster", source: "osm" }],
@@ -183,10 +192,56 @@ export function MapView({
       center,
       zoom,
       interactive,
+      attributionControl: false,
     });
+    
+    if (showAttribution) {
+      map.addControl(
+        new maplibregl.AttributionControl({
+          compact: true,
+          customAttribution: "Rota: OSRM (yoksa kuş bakışı)",
+        }),
+        "bottom-left"
+      );
+    }
+    
     map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+    map.on("mousedown", (e) => {
+      clickStartRef.current = { x: e.point.x, y: e.point.y, time: Date.now() };
+    });
+
+    map.on("touchstart", (e) => {
+      if (e.points.length === 1) {
+        clickStartRef.current = { x: e.points[0].x, y: e.points[0].y, time: Date.now() };
+      } else {
+        clickStartRef.current = null;
+      }
+    });
+
     map.on("click", (e) => {
-      if (onClickRef.current) onClickRef.current(e.lngLat.lat, e.lngLat.lng);
+      const start = clickStartRef.current;
+      if (!start) return;
+      
+      const dx = Math.abs(e.point.x - start.x);
+      const dy = Math.abs(e.point.y - start.y);
+      const dt = Date.now() - start.time;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 10 && dt < 500) {
+        const features = map.queryRenderedFeatures(e.point);
+        const isOnMarkerOrControl = features.some(f => f.layer.id.includes("marker"));
+        
+        if (!isOnMarkerOrControl && onTapRef.current) {
+          onTapRef.current();
+        }
+        
+        if (onClickRef.current) {
+          onClickRef.current(e.lngLat.lat, e.lngLat.lng);
+        }
+      }
+      
+      clickStartRef.current = null;
     });
 
     const markReady = () => {
@@ -201,7 +256,7 @@ export function MapView({
 
     if (map.loaded()) markReady();
     else map.once("load", markReady);
-    // flex layouts: resize when container gets size
+
     const ro = new ResizeObserver(() => {
       map.resize();
     });
@@ -215,7 +270,7 @@ export function MapView({
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [showAttribution]);
 
   // Draw markers + route whenever stops change AND map is ready
   useEffect(() => {
