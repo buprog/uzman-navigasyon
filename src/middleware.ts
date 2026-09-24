@@ -2,87 +2,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isAdminRequest, isInternalAdminPath, rewriteAdminPath, getAdminPath } from '@/lib/adminPath';
 
-const BASIC_AUTH_HEADER = 'x-admin-basic-auth-verified';
-
-// In-memory rate limiting for basic auth failures
-const basicAuthFailures = new Map<string, { count: number; resetAt: number }>();
-const BASIC_AUTH_RATE_LIMIT = 5; // Max failures per window
-const BASIC_AUTH_RATE_WINDOW = 15 * 60 * 1000; // 15 minutes
+const ADMIN_REWRITE_HEADER = 'x-admin-rewrite';
 
 function getClientIp(request: NextRequest): string {
   return request.headers.get('x-forwarded-for')?.split(',')[0].trim() 
     || request.headers.get('x-real-ip') 
     || request.ip 
     || 'unknown';
-}
-
-function checkBasicAuthRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const record = basicAuthFailures.get(ip);
-  
-  if (!record || now > record.resetAt) {
-    basicAuthFailures.set(ip, { count: 0, resetAt: now + BASIC_AUTH_RATE_WINDOW });
-    return true;
-  }
-  
-  if (record.count >= BASIC_AUTH_RATE_LIMIT) {
-    return false;
-  }
-  
-  return true;
-}
-
-function recordBasicAuthFailure(ip: string): void {
-  const now = Date.now();
-  const record = basicAuthFailures.get(ip);
-  
-  if (!record || now > record.resetAt) {
-    basicAuthFailures.set(ip, { count: 1, resetAt: now + BASIC_AUTH_RATE_WINDOW });
-  } else {
-    record.count++;
-  }
-  
-  // Log the failure
-  console.warn(`[Security] Basic auth failure from IP: ${ip} at ${new Date().toISOString()}`);
-}
-
-function verifyBasicAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  
-  if (!authHeader || !authHeader.startsWith('Basic ')) {
-    return false;
-  }
-  
-  const base64Credentials = authHeader.slice(6);
-  const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
-  const [username, password] = credentials.split(':');
-  
-  const expectedUser = process.env.ADMIN_BASIC_USER;
-  const expectedPassword = process.env.ADMIN_BASIC_PASSWORD;
-  
-  if (!expectedUser || !expectedPassword) {
-    console.error('[Security] ADMIN_BASIC_USER or ADMIN_BASIC_PASSWORD not set');
-    return false;
-  }
-  
-  // Constant-time comparison
-  const userMatch = constantTimeCompare(username, expectedUser);
-  const passwordMatch = constantTimeCompare(password, expectedPassword);
-  
-  return userMatch && passwordMatch;
-}
-
-function constantTimeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  
-  return result === 0;
 }
 
 function checkIpAllowlist(ip: string): boolean {
@@ -124,7 +50,7 @@ export function middleware(request: NextRequest) {
   // Block direct access to internal admin path
   if (isInternalAdminPath(pathname)) {
     // Only allow if coming from our rewrite (has the special header)
-    if (!request.headers.get(BASIC_AUTH_HEADER)) {
+    if (!request.headers.get(ADMIN_REWRITE_HEADER)) {
       return new NextResponse(null, { status: 404 });
     }
   }
@@ -143,35 +69,14 @@ export function middleware(request: NextRequest) {
       return new NextResponse(null, { status: 404 });
     }
     
-    // Check rate limit for basic auth
-    if (!checkBasicAuthRateLimit(ip)) {
-      return new NextResponse('Too many authentication attempts', {
-        status: 429,
-        headers: {
-          'Retry-After': '900', // 15 minutes
-        },
-      });
-    }
-    
-    // Verify HTTP Basic Auth
-    if (!verifyBasicAuth(request)) {
-      recordBasicAuthFailure(ip);
-      return new NextResponse('Authentication required', {
-        status: 401,
-        headers: {
-          'WWW-Authenticate': 'Basic realm="Restricted"',
-        },
-      });
-    }
-    
     // Rewrite to internal path
     const rewrittenPath = rewriteAdminPath(pathname);
     const url = request.nextUrl.clone();
     url.pathname = rewrittenPath;
     
-    // Add header to mark as verified and from rewrite
+    // Add header to mark as from rewrite
     const headers = new Headers(request.headers);
-    headers.set(BASIC_AUTH_HEADER, 'true');
+    headers.set(ADMIN_REWRITE_HEADER, 'true');
     
     const response = NextResponse.rewrite(url, { request: { headers } });
     
@@ -184,7 +89,7 @@ export function middleware(request: NextRequest) {
     return response;
   }
   
-  // Handle admin API routes
+  // Admin API routes: IP allowlist only (session checked in route handlers)
   if (pathname.startsWith('/api/admin/')) {
     if (!adminPath) {
       return new NextResponse(null, { status: 404 });
@@ -195,24 +100,6 @@ export function middleware(request: NextRequest) {
     // Check IP allowlist
     if (!checkIpAllowlist(ip)) {
       return new NextResponse(null, { status: 404 });
-    }
-    
-    // Check rate limit
-    if (!checkBasicAuthRateLimit(ip)) {
-      return new NextResponse('Too many authentication attempts', {
-        status: 429,
-      });
-    }
-    
-    // Verify HTTP Basic Auth
-    if (!verifyBasicAuth(request)) {
-      recordBasicAuthFailure(ip);
-      return new NextResponse('Authentication required', {
-        status: 401,
-        headers: {
-          'WWW-Authenticate': 'Basic realm="Restricted"',
-        },
-      });
     }
   }
   

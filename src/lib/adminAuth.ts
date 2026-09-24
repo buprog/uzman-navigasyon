@@ -2,45 +2,25 @@ import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "./prisma";
 import { getAdminPath } from "./adminPath";
+import { isGoogleOAuthConfigured } from "./googleOAuth";
 
 const ADMIN_COOKIE = "c_sess";
-const SECRET = process.env.AUTH_SECRET || "uzman-navigasyon-dev-secret-change-me";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-
-const ADMIN_ENABLED = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
+const SECRET = process.env.ADMIN_SESSION_SECRET || process.env.AUTH_SECRET || "uzman-navigasyon-dev-secret-change-me";
 
 function sign(payload: string): string {
   return createHmac("sha256", SECRET).update(payload).digest("base64url");
 }
 
 export function isAdminEnabled(): boolean {
-  return ADMIN_ENABLED;
+  return isGoogleOAuthConfigured();
 }
 
-/**
- * Constant-time comparison for admin credentials
- */
-export function verifyAdminCredentials(email: string, password: string): boolean {
-  if (!ADMIN_ENABLED) return false;
-
-  try {
-    const emailMatch = timingSafeEqual(
-      Buffer.from(email.trim().toLowerCase()),
-      Buffer.from(ADMIN_EMAIL!.trim().toLowerCase())
-    );
-    const passwordMatch = timingSafeEqual(
-      Buffer.from(password),
-      Buffer.from(ADMIN_PASSWORD!)
-    );
-    return emailMatch && passwordMatch;
-  } catch {
-    return false;
-  }
-}
-
-export async function createAdminSession(email: string) {
-  const payload = `${email}.${Date.now()}`;
+export async function createAdminSession(
+  email: string,
+  googleSub?: string,
+  name?: string
+) {
+  const payload = `${email}.${googleSub || 'unknown'}.${Date.now()}`;
   const token = `${payload}.${sign(payload)}`;
   const adminPath = getAdminPath();
   const cookiePath = adminPath ? `/${adminPath}` : '/';
@@ -50,7 +30,7 @@ export async function createAdminSession(email: string) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: cookiePath,
-    maxAge: 60 * 60 * 1, // 1 hour (short-lived)
+    maxAge: 60 * 60 * 8, // 8 hours
   });
 }
 
@@ -65,7 +45,7 @@ export async function getAdminSession(): Promise<string | null> {
   if (!token) return null;
 
   const parts = token.split(".");
-  if (parts.length < 3) return null;
+  if (parts.length < 4) return null; // email.sub.timestamp.signature
 
   const sig = parts.pop()!;
   const payload = parts.join(".");
@@ -79,8 +59,8 @@ export async function getAdminSession(): Promise<string | null> {
     return null;
   }
 
-  const email = payload.split(".")[0];
-  if (!email || email !== ADMIN_EMAIL) return null;
+  const email = parts[0];
+  if (!email) return null;
 
   return email;
 }

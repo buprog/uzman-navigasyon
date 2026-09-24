@@ -14,9 +14,9 @@ export function AdminDashboard({ adminEmail }: Props) {
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState<"ads" | "settings">("ads");
 
-  async function handleLogout() {
+  async function handleSignOut() {
     await fetch("/api/admin/logout", { method: "POST" });
-    // Redirect to login page (same path with /signin)
+    // Redirect to sign-in page
     router.push(pathname + '/signin');
   }
 
@@ -33,10 +33,10 @@ export function AdminDashboard({ adminEmail }: Props) {
             </p>
           </div>
           <button
-            onClick={handleLogout}
+            onClick={handleSignOut}
             className="btn-secondary"
           >
-            Çıkış Yap
+            Sign Out
           </button>
         </div>
       </header>
