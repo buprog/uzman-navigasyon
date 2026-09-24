@@ -2,24 +2,27 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { THEME_LABELS } from "@/lib/theme";
+import { THEME_LABELS, MODE_LABELS } from "@/lib/theme";
 
 type ThemePreference = "neutral" | "female" | "male" | null;
+type ColorModePreference = "light" | "dark" | null;
 
 export default function ThemeSettingsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<ThemePreference>(null);
+  const [currentMode, setCurrentMode] = useState<ColorModePreference>(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    // Fetch current user to get theme preference
+    // Fetch current user to get theme and mode preferences
     async function fetchUser() {
       try {
         const res = await fetch("/api/auth/me");
         if (res.ok) {
           const data = await res.json();
           setCurrentTheme(data.user?.themePreference || null);
+          setCurrentMode(data.user?.colorModePreference || null);
         }
       } catch (err) {
         console.error("Failed to fetch user:", err);
@@ -55,6 +58,33 @@ export default function ThemeSettingsPage() {
     }
   }
 
+  async function handleModeChange(mode: ColorModePreference) {
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/account/mode", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ colorModePreference: mode }),
+      });
+
+      if (res.ok) {
+        setCurrentMode(mode);
+        setMessage("✅ Görünüm tercihi kaydedildi");
+        setTimeout(() => {
+          router.refresh();
+        }, 500);
+      } else {
+        setMessage("❌ Görünüm güncellenemedi");
+      }
+    } catch (err) {
+      setMessage("❌ Görünüm güncellenemedi");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const themes: { value: ThemePreference; label: string; preview: string }[] = [
     { value: null, label: THEME_LABELS.null, preview: "Cinsiyetinize göre otomatik tema" },
     { value: "neutral", label: THEME_LABELS.neutral, preview: "Varsayılan temiz görünüm" },
@@ -62,15 +92,57 @@ export default function ThemeSettingsPage() {
     { value: "male", label: THEME_LABELS.male, preview: "Koyu arka plan, keskin hatlar" },
   ];
 
+  const modes: { value: ColorModePreference; label: string; preview: string }[] = [
+    { value: null, label: MODE_LABELS.null, preview: "İşletim sisteminize göre otomatik" },
+    { value: "light", label: MODE_LABELS.light, preview: "Açık renkli görünüm" },
+    { value: "dark", label: MODE_LABELS.dark, preview: "Karanlık görünüm" },
+  ];
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Tema Ayarları</h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">Görünüm Ayarları</h1>
         <p className="text-sm text-slate-600">
-          Uygulamanın görünümünü kişiselleştirin
+          Uygulamanın tema ve rengini kişiselleştirin
         </p>
       </div>
 
+      {/* Color Mode Selector */}
+      <div className="bg-white rounded-xl shadow-sm p-6 space-y-4 mb-6">
+        <h2 className="text-lg font-semibold text-slate-900 mb-3">Görünüm</h2>
+        {modes.map((mode) => (
+          <button
+            key={mode.value || "system"}
+            onClick={() => handleModeChange(mode.value)}
+            disabled={loading}
+            className={`w-full text-left p-4 rounded-lg border-2 transition ${
+              currentMode === mode.value
+                ? "border-teal-700 bg-teal-50"
+                : "border-slate-200 hover:border-slate-300 bg-white"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  currentMode === mode.value
+                    ? "border-teal-700 bg-teal-700"
+                    : "border-slate-300"
+                }`}
+              >
+                {currentMode === mode.value && (
+                  <div className="w-2 h-2 bg-white rounded-full" />
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-slate-900">{mode.label}</p>
+                <p className="text-xs text-slate-600 mt-0.5">{mode.preview}</p>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Theme Selector */}
       <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
         {themes.map((theme) => (
           <button
@@ -126,8 +198,11 @@ export default function ThemeSettingsPage() {
       </div>
 
       <div className="mt-6 rounded-lg bg-slate-50 border border-slate-200 p-4">
+        <p className="text-xs text-slate-600 mb-2">
+          💡 <strong>Görünüm:</strong> "Sistem" seçeneği, işletim sisteminizin karanlık/açık mod tercihini takip eder ve OS değişikliklerine anında tepki verir.
+        </p>
         <p className="text-xs text-slate-600">
-          💡 <strong>Not:</strong> Otomatik tema, kayıt sırasında seçtiğiniz cinsiyete göre belirlenir.
+          💡 <strong>Tema:</strong> Otomatik tema, kayıt sırasında seçtiğiniz cinsiyete göre belirlenir.
           Misafir kullanıcılar için varsayılan nötr tema uygulanır.
         </p>
       </div>

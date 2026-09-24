@@ -4,7 +4,7 @@ import { Nav } from "@/components/Nav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { AdBanner } from "@/components/AdBanner";
 import { getSessionUser } from "@/lib/auth";
-import { getServerTheme } from "@/lib/theme.server";
+import { getServerTheme, getServerMode } from "@/lib/theme.server";
 
 export const metadata: Metadata = {
   title: "Uzman Navigasyon",
@@ -42,11 +42,12 @@ export default async function RootLayout({
 }: { 
   children: React.ReactNode;
   params?: any;
-  searchParams?: { previewTheme?: string };
+  searchParams?: { previewTheme?: string; previewMode?: string };
 }) {
-  // Resolve theme server-side to prevent flash
+  // Resolve theme and mode server-side to prevent flash
   const user = await getSessionUser();
   const previewTheme = searchParams?.previewTheme;
+  const previewMode = searchParams?.previewMode;
   
   const theme = getServerTheme(
     user ? {
@@ -56,8 +57,36 @@ export default async function RootLayout({
     previewTheme
   );
 
+  const mode = getServerMode(
+    user ? {
+      colorModePreference: user.colorModePreference as "light" | "dark" | null,
+    } : undefined,
+    previewMode
+  );
+
   return (
-    <html lang="tr" data-theme={theme}>
+    <html lang="tr" data-theme={theme} data-mode={mode || undefined}>
+      <head>
+        {/* Inline script to detect system color scheme and prevent flash */}
+        {!mode && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function() {
+                  try {
+                    const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                    const applyMode = (isDark) => {
+                      document.documentElement.setAttribute('data-mode', isDark ? 'dark' : 'light');
+                    };
+                    applyMode(darkQuery.matches);
+                    darkQuery.addEventListener('change', (e) => applyMode(e.matches));
+                  } catch (e) {}
+                })();
+              `,
+            }}
+          />
+        )}
+      </head>
       <body>
         <Nav />
         <InstallPrompt />

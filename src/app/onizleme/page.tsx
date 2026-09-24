@@ -4,12 +4,14 @@ import { useState } from "react";
 
 type DeviceType = "iphone" | "android";
 type ThemePreview = "female" | "male" | "neutral";
+type ModePreview = "light" | "dark" | "system";
 
 export default function PreviewPage() {
   const [device, setDevice] = useState<DeviceType>("iphone");
   const [themePreview, setThemePreview] = useState<ThemePreview>("neutral");
+  const [modePreview, setModePreview] = useState<ModePreview>("system");
   
-  const iframeUrl = `/?previewTheme=${themePreview}`;
+  const iframeUrl = `/?previewTheme=${themePreview}&previewMode=${modePreview}`;
   
   // Device dimensions
   const dimensions = {
@@ -114,10 +116,50 @@ export default function PreviewPage() {
               </div>
             </div>
 
+            {/* Color mode simulator */}
+            <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+              <h3 className="text-sm font-semibold text-white mb-3">
+                Karanlık Mod
+              </h3>
+              <div className="space-y-2">
+                <button
+                  onClick={() => setModePreview("light")}
+                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
+                    modePreview === "light"
+                      ? "bg-yellow-600 text-white"
+                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
+                >
+                  ☀️ Açık
+                </button>
+                <button
+                  onClick={() => setModePreview("dark")}
+                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
+                    modePreview === "dark"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
+                >
+                  🌙 Karanlık
+                </button>
+                <button
+                  onClick={() => setModePreview("system")}
+                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
+                    modePreview === "system"
+                      ? "bg-purple-600 text-white"
+                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
+                >
+                  💻 Sistem
+                </button>
+              </div>
+            </div>
+
             {/* Info */}
             <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
               <p className="text-xs text-slate-400">
-                💡 Tema taklidi gerçek hesap verilerinizi değiştirmez, sadece önizleme içindir.
+                💡 Tema ve mod taklidi gerçek hesap verilerinizi değiştirmez, sadece önizleme içindir.
+                Tüm 6 kombinasyonu (3 tema × 2 mod) test edebilirsiniz.
               </p>
             </div>
           </div>
@@ -148,7 +190,7 @@ export default function PreviewPage() {
 
               {/* iframe */}
               <iframe
-                key={`${device}-${themePreview}`}
+                key={`${device}-${themePreview}-${modePreview}`}
                 src={iframeUrl}
                 className="w-full h-full rounded-[2.5rem] bg-white"
                 style={{
