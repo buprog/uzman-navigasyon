@@ -88,7 +88,7 @@ export default function NavigasyonPage() {
             onClick={() => router.push("/turlar")}
             className="btn-primary mt-6 w-full"
           >
-            Turlarım'a Dön
+            Turlarım&apos;a Dön
           </button>
         </div>
       </div>
