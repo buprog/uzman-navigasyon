@@ -75,6 +75,7 @@ export default function PlanlayiciPage() {
   const [fullScreenMap, setFullScreenMap] = useState(false);
   const [addStopMode, setAddStopMode] = useState(false);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const mobileToolbarRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   
   const isPremium = userPlan === "premium";
@@ -204,7 +205,13 @@ export default function PlanlayiciPage() {
   }
 
   useEffect(() => {
-    if (mapRef.current) {
+    if (!mapRef.current) return;
+    
+    if (fullScreenMap) {
+      setTimeout(() => {
+        mapRef.current?.resize();
+      }, 320);
+    } else {
       mapRef.current.resize();
     }
   }, [fullScreenMap]);
@@ -582,9 +589,12 @@ export default function PlanlayiciPage() {
   );
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+    <div className="flex h-[100dvh] lg:h-[calc(100vh-3.5rem)] flex-col planner-container">
       {/* Mobile toolbar - hide when fullScreenMap */}
-      <div className={`lg:hidden transition-transform duration-300 ${fullScreenMap ? "-translate-y-full absolute inset-x-0 top-0 z-20" : "relative z-10"}`}>
+      <div 
+        ref={mobileToolbarRef}
+        className={`lg:hidden transition-transform duration-300 ${fullScreenMap ? "-translate-y-full absolute inset-x-0 top-0 z-20" : "relative z-10"}`}
+      >
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 text-sm">
           <Link href="/turlar" className="text-slate-500 hover:text-teal-800 shrink-0">
             ← <span className="hidden sm:inline">Turlarım</span>
@@ -702,7 +712,7 @@ export default function PlanlayiciPage() {
 
         {/* Mobile: Bottom sheet */}
         <div className="lg:hidden">
-          <BottomSheet fullScreen={fullScreenMap}>
+          <BottomSheet fullScreen={fullScreenMap} toolbarRef={mobileToolbarRef}>
             {planPanelContent}
           </BottomSheet>
         </div>

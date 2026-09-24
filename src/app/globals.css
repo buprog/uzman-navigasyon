@@ -48,6 +48,13 @@ body {
   body.planner-fullscreen-mobile header {
     transform: translateY(-100%);
   }
+  
+  body.planner-fullscreen-mobile .planner-container {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    z-index: 30;
+  }
 }
 
 /* Attribution positioning on planner page */
@@ -62,14 +69,18 @@ body {
 }
 
 /* Bottom sheet on mobile: position attribution above it */
+:root {
+  --sheet-h: 120px;
+}
+
 @media (max-width: 1023px) {
   .maplibregl-ctrl-bottom-left {
-    bottom: 130px !important;
-    left: 8px !important;
+    bottom: calc(var(--sheet-h, 120px) + 8px) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    transition: bottom 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   }
   
   body.planner-fullscreen-mobile .maplibregl-ctrl-bottom-left {
     bottom: max(8px, env(safe-area-inset-bottom)) !important;
-    left: max(8px, env(safe-area-inset-left)) !important;
   }
 }

@@ -9,6 +9,7 @@ type Props = {
   defaultSnap?: SnapPoint;
   onSnapChange?: (snap: SnapPoint) => void;
   fullScreen?: boolean;
+  toolbarRef?: React.RefObject<HTMLElement>;
 };
 
 const SNAP_CONFIG = {
@@ -17,7 +18,7 @@ const SNAP_CONFIG = {
   expanded: "90vh",
 };
 
-export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange, fullScreen = false }: Props) {
+export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange, fullScreen = false, toolbarRef }: Props) {
   const [snap, setSnap] = useState<SnapPoint>(defaultSnap);
   const [isDragging, setIsDragging] = useState(false);
   const [translateY, setTranslateY] = useState(0);
@@ -32,11 +33,17 @@ export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange,
   const updateSnapHeights = () => {
     if (!containerRef.current) return;
     const vh = window.innerHeight;
-    const toolbarHeight = 56;
+    let toolbarBottom = 0;
+    
+    if (toolbarRef?.current) {
+      const rect = toolbarRef.current.getBoundingClientRect();
+      toolbarBottom = rect.bottom;
+    }
+    
     snapHeightsRef.current = {
       collapsed: 120,
       half: vh * 0.5,
-      expanded: Math.min(vh * 0.9, vh - toolbarHeight - 20),
+      expanded: toolbarBottom > 0 ? vh - toolbarBottom - 8 : vh * 0.85,
     };
   };
 
@@ -49,27 +56,52 @@ export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange,
 
   const snapTo = (s: SnapPoint) => {
     setSnap(s);
-    setTranslateY(getTranslateForSnap(s));
+    const newTranslateY = getTranslateForSnap(s);
+    setTranslateY(newTranslateY);
+    
+    const vh = window.innerHeight;
+    const sheetHeight = vh - newTranslateY;
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty('--sheet-h', `${sheetHeight}px`);
+    }
+    
     onSnapChange?.(s);
   };
 
   useEffect(() => {
     updateSnapHeights();
     snapTo(defaultSnap);
+    
     const handleResize = () => {
       updateSnapHeights();
       snapTo(snap);
     };
+    
+    let resizeObserver: ResizeObserver | null = null;
+    if (toolbarRef?.current) {
+      resizeObserver = new ResizeObserver(handleResize);
+      resizeObserver.observe(toolbarRef.current);
+    }
+    
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
+    
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+      resizeObserver?.disconnect();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [toolbarRef]);
 
   useEffect(() => {
     if (fullScreen) {
       setSavedSnap(snap);
       const vh = window.innerHeight;
       setTranslateY(vh);
+      if (typeof document !== 'undefined') {
+        document.documentElement.style.setProperty('--sheet-h', '0px');
+      }
     } else if (savedSnap) {
       snapTo(savedSnap);
     }
