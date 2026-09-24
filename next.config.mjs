@@ -9,6 +9,15 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  async redirects() {
+    return [
+      {
+        source: "/giris",
+        destination: "/auth",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default withPWA({

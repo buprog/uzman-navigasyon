@@ -237,18 +237,18 @@ export default function PlanlayiciPage() {
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
       {/* Top bar */}
-      <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white px-4 py-2">
-        <Link href="/turlar" className="text-sm text-slate-500 hover:text-teal-800">
-          ← Turlarım
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 text-sm">
+        <Link href="/turlar" className="text-slate-500 hover:text-teal-800 shrink-0">
+          ← <span className="hidden sm:inline">Turlarım</span>
         </Link>
         <input
-          className="input !w-auto min-w-[200px] font-semibold"
+          className="input !w-auto min-w-[120px] flex-1 font-semibold sm:min-w-[200px]"
           value={tour.name}
           onChange={(e) => setTour({ ...tour, name: e.target.value })}
           onBlur={() => saveTourMeta({ name: tour.name })}
         />
         <button
-          className="btn-primary !py-1.5"
+          className="btn-primary !py-1.5 shrink-0"
           disabled={saving}
           onClick={() =>
             saveTourMeta({
@@ -260,32 +260,39 @@ export default function PlanlayiciPage() {
         >
           {saving ? "…" : "Kaydet"}
         </button>
-        <Link href={`/turlar/${tour.id}/kalkislar`} className="btn-secondary !py-1.5">
-          Kalkışlar / Paylaş
+        <Link href={`/turlar/${tour.id}/kalkislar`} className="btn-secondary !py-1.5 shrink-0">
+          <span className="hidden sm:inline">Kalkışlar /</span> Paylaş
         </Link>
         <Link
           href={`/navigasyon/${tour.id}`}
-          className="btn-primary !py-1.5 !bg-blue-600 hover:!bg-blue-700"
+          className="btn-primary !py-1.5 !bg-blue-600 hover:!bg-blue-700 shrink-0"
         >
-          🧭 Navigasyonu Başlat
+          🧭 <span className="hidden sm:inline">Navigasyonu Başlat</span>
         </Link>
-        <button className="btn-secondary !py-1.5" onClick={() => window.print()}>
+        <a
+          href="tel:112"
+          className="btn-secondary !py-1.5 !bg-red-600 !text-white hover:!bg-red-700 shrink-0"
+          title="Acil Durum"
+        >
+          <span className="hidden sm:inline">Acil:</span> 112
+        </a>
+        <button className="btn-secondary !py-1.5 hidden sm:inline-block shrink-0" onClick={() => window.print()}>
           Yazdır
         </button>
         <button
-          className="btn-secondary !py-1.5"
+          className="btn-secondary !py-1.5 hidden md:inline-block shrink-0"
           onClick={() => setBriefingOpen(true)}
           title="Örnek brifing listesi — video CDN yok"
         >
           Yola çıkmadan izle{" "}
           <span className="text-[10px] opacity-70">(örnek)</span>
         </button>
-        {msg && <span className="text-xs text-teal-700">{msg}</span>}
+        {msg && <span className="text-xs text-teal-700 w-full sm:w-auto">{msg}</span>}
       </div>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* PLAN panel */}
-        <aside className="flex w-80 shrink-0 flex-col border-r border-slate-200 bg-white print:w-full">
+        <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-80 lg:border-b-0 lg:border-r print:w-full">
           <div className="border-b border-slate-100 p-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -581,13 +588,13 @@ export default function PlanlayiciPage() {
         </aside>
 
         {/* Map */}
-        <div className="relative min-w-0 flex-1 print:hidden">
+        <div className="relative min-w-0 flex-1 print:hidden" style={{ minHeight: "45vh" }}>
           <MapView
             stops={[...tour.stops]
               .filter((s) => !s.skipped)
               .sort((a, b) => a.dayIndex - b.dayIndex || a.order - b.order)}
             onMapClick={addStopAt}
-            className="h-full w-full min-h-[320px]"
+            className="h-full w-full min-h-[45vh]"
             mockChargers={mockChargers}
           />
           <div className="pointer-events-none absolute bottom-3 left-3 rounded-md bg-white/90 px-2 py-1 text-[10px] text-slate-600 shadow">

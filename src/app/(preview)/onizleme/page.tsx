@@ -6,31 +6,39 @@ export default function OnizlemePage() {
   const [device, setDevice] = useState<"iphone" | "android">("iphone");
   const [firstTourId, setFirstTourId] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
+  const [containerHeight, setContainerHeight] = useState(868);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Calculate scale for small viewports
+  const deviceSpecs = {
+    iphone: { width: 390, height: 844, name: "iPhone 14 Pro" },
+    android: { width: 412, height: 915, name: "Pixel 7" },
+  };
+
+  const spec = deviceSpecs[device];
+  const frameWidth = spec.width + 24;
+  const frameHeight = spec.height + 24;
+
+  // Calculate scale for viewport fit
   useEffect(() => {
     const calculateScale = () => {
-      const viewportHeight = window.innerHeight;
-      const viewportWidth = window.innerWidth;
-      const phoneHeight = device === "iphone" ? 868 : 939; // frame height + padding
-      const phoneWidth = device === "iphone" ? 414 : 436; // frame width
+      const toolbarHeight = 120;
+      const padding = 64;
       
-      // Add space for controls (120px top)
-      const availableHeight = viewportHeight - 120;
-      const availableWidth = viewportWidth - 64; // 32px padding each side
+      const availableHeight = window.innerHeight - toolbarHeight - padding;
+      const availableWidth = window.innerWidth - padding;
       
-      const scaleH = availableHeight / phoneHeight;
-      const scaleW = availableWidth / phoneWidth;
+      const scaleH = availableHeight / frameHeight;
+      const scaleW = availableWidth / frameWidth;
       const newScale = Math.min(1, scaleH, scaleW);
       
       setScale(newScale);
+      setContainerHeight(frameHeight * newScale);
     };
     
     calculateScale();
     window.addEventListener("resize", calculateScale);
     return () => window.removeEventListener("resize", calculateScale);
-  }, [device]);
+  }, [device, frameHeight, frameWidth]);
 
   // Fetch first tour ID for quick navigation
   useEffect(() => {
@@ -61,13 +69,6 @@ export default function OnizlemePage() {
       iframeRef.current.src = "/api/auth/clear-and-reload";
     }
   };
-
-  const deviceSpecs = {
-    iphone: { width: 390, height: 844, name: "iPhone 14 Pro" },
-    android: { width: 412, height: 915, name: "Pixel 7" },
-  };
-
-  const spec = deviceSpecs[device];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 p-8">
@@ -144,49 +145,58 @@ export default function OnizlemePage() {
           </div>
           
           <div className="mt-2 text-xs text-slate-500">
-            {spec.name} · {spec.width}×{spec.height}
+            {spec.name} · {spec.width}×{spec.height} · scale: {scale.toFixed(2)}
           </div>
         </div>
 
         <div className="flex justify-center">
           <div
-            className="relative origin-top"
+            className="relative"
             style={{
-              width: spec.width + 24,
-              height: spec.height + 24,
-              transform: `scale(${scale})`,
+              width: frameWidth,
+              height: containerHeight,
             }}
           >
-            {/* Phone frame */}
             <div
-              className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 shadow-2xl"
-              style={{ width: spec.width + 24, height: spec.height + 24 }}
+              className="absolute left-0 top-0"
+              style={{
+                width: frameWidth,
+                height: frameHeight,
+                transform: `scale(${scale})`,
+                transformOrigin: "top center",
+              }}
             >
-              {/* Notch or punch hole */}
-              {device === "iphone" ? (
-                <div className="absolute left-1/2 top-0 z-20 h-7 w-40 -translate-x-1/2 rounded-b-3xl bg-slate-900"></div>
-              ) : (
-                <div className="absolute right-16 top-3 z-20 h-3 w-3 rounded-full bg-slate-900 ring-2 ring-slate-800"></div>
-              )}
-
-              {/* Screen */}
+              {/* Phone frame */}
               <div
-                className="absolute left-3 top-3 overflow-hidden rounded-[2rem] bg-white"
-                style={{ width: spec.width, height: spec.height }}
+                className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 shadow-2xl"
+                style={{ width: frameWidth, height: frameHeight }}
               >
-                <iframe
-                  ref={iframeRef}
-                  src="/"
-                  className="h-full w-full border-0"
-                  title="Mobile Preview"
-                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-top-navigation"
-                />
-              </div>
+                {/* Notch or punch hole */}
+                {device === "iphone" ? (
+                  <div className="absolute left-1/2 top-0 z-20 h-7 w-40 -translate-x-1/2 rounded-b-3xl bg-slate-900"></div>
+                ) : (
+                  <div className="absolute right-16 top-3 z-20 h-3 w-3 rounded-full bg-slate-900 ring-2 ring-slate-800"></div>
+                )}
 
-              {/* Bottom bar (Android) */}
-              {device === "android" && (
-                <div className="absolute bottom-2 left-1/2 h-1 w-32 -translate-x-1/2 rounded-full bg-slate-700"></div>
-              )}
+                {/* Screen */}
+                <div
+                  className="absolute left-3 top-3 overflow-hidden rounded-[2rem] bg-white"
+                  style={{ width: spec.width, height: spec.height }}
+                >
+                  <iframe
+                    ref={iframeRef}
+                    src="/"
+                    className="h-full w-full border-0"
+                    title="Mobile Preview"
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-top-navigation"
+                  />
+                </div>
+
+                {/* Bottom bar (Android) */}
+                {device === "android" && (
+                  <div className="absolute bottom-2 left-1/2 h-1 w-32 -translate-x-1/2 rounded-full bg-slate-700"></div>
+                )}
+              </div>
             </div>
           </div>
         </div>
