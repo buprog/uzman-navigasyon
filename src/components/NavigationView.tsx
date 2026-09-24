@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { MapStop } from "./MapView";
@@ -14,14 +14,18 @@ import {
   type NavigationRoute,
   type NavigationStep,
 } from "@/lib/navigation";
+import { RouteWeatherStrip, RouteWeatherStripSkeleton } from "./RouteWeatherStrip";
+import { useRouteWeather } from "@/hooks/useRouteWeather";
+import { sampleRoutePoints, calculateForecastDays } from "@/lib/routeWeather";
 
 type Props = {
   stops: MapStop[];
   onExit: () => void;
   onFirstArrival?: () => void;
+  useMockWeather?: boolean;
 };
 
-export function NavigationView({ stops, onExit, onFirstArrival }: Props) {
+export function NavigationView({ stops, onExit, onFirstArrival, useMockWeather = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
@@ -45,6 +49,28 @@ export function NavigationView({ stops, onExit, onFirstArrival }: Props) {
 
   const currentStop = stops[currentStopIndex];
   const nextStop = stops[currentStopIndex + 1];
+
+  // Calculate route weather points
+  const weatherPoints = useMemo(() => {
+    if (!route || !currentLocation) return null;
+
+    const totalDistanceKm = route.totalDistance / 1000;
+    const totalDurationSec = Math.max(
+      600, // minimum 10 min
+      totalDistanceKm * 60 // assume 60 km/h average
+    );
+
+    return sampleRoutePoints(
+      route.coordinates.map(([lng, lat]) => [lat, lng]),
+      totalDistanceKm,
+      totalDurationSec,
+      new Date(),
+      stops.map(s => ({ name: s.name, lat: s.lat, lng: s.lng }))
+    );
+  }, [route, currentLocation, stops]);
+
+  // Fetch weather data
+  const { weatherPoints: routeWeather, loading: weatherLoading, error: weatherError, retry: retryWeather } = useRouteWeather(weatherPoints, { useMock: useMockWeather });
 
   const requestLocationPermission = useCallback(async () => {
     if (!navigator.geolocation) {
@@ -405,6 +431,12 @@ export function NavigationView({ stops, onExit, onFirstArrival }: Props) {
           <div className="mb-2 rounded-lg bg-red-500 p-3 text-center text-sm font-medium text-white shadow-lg">
             ⚠️ Rotadan çıktınız - Yeniden hesaplanıyor…
           </div>
+        )}
+
+        {/* Route weather strip */}
+        {weatherLoading && <RouteWeatherStripSkeleton />}
+        {!weatherLoading && routeWeather && routeWeather.length > 0 && (
+          <RouteWeatherStrip points={routeWeather} onRetry={retryWeather} />
         )}
 
         {nextStep && (

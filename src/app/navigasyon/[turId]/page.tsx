@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { NavigationView } from "@/components/NavigationView";
 import { PaymentModal } from "@/components/PaymentModal";
@@ -34,12 +34,17 @@ type Tour = {
 export default function NavigasyonPage() {
   const { turId } = useParams<{ turId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tour, setTour] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [userPlan, setUserPlan] = useState<string>("basic");
   const [trialActive, setTrialActive] = useState(true);
+
+  // Detect if in preview mode for mock weather
+  const useMockWeather = searchParams.get('previewRouteWeather') === 'mock' || 
+                         searchParams.get('previewTheme') !== null;
 
   const load = useCallback(async () => {
     try {
@@ -179,6 +184,7 @@ export default function NavigasyonPage() {
         stops={activeStops} 
         onExit={handleExit}
         onFirstArrival={handleFirstArrival}
+        useMockWeather={useMockWeather}
       />
       {showPaymentModal && (
         <PaymentModal
