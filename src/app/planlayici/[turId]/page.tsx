@@ -589,7 +589,7 @@ export default function PlanlayiciPage() {
   );
 
   return (
-    <div className="flex h-[calc(100dvh-57px)] lg:h-[calc(100vh-57px)] flex-col planner-container">
+    <div className="flex h-full flex-col planner-container">
       {/* Mobile toolbar - hide when fullScreenMap */}
       <div 
         ref={mobileToolbarRef}
