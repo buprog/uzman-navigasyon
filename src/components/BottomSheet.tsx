@@ -65,6 +65,7 @@ export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange,
       const plannerContainer = containerRef.current.closest('.planner-container');
       if (plannerContainer instanceof HTMLElement) {
         plannerContainer.style.setProperty('--sheet-h', `${sheetHeight}px`);
+        plannerContainer.setAttribute('data-sheet', s);
       }
     }
     
@@ -106,6 +107,7 @@ export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange,
         const plannerContainer = containerRef.current.closest('.planner-container');
         if (plannerContainer instanceof HTMLElement) {
           plannerContainer.style.setProperty('--sheet-h', '0px');
+          plannerContainer.setAttribute('data-sheet', 'fullscreen');
         }
       }
     } else if (savedSnap) {
@@ -120,6 +122,7 @@ export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange,
         const plannerContainer = containerRef.current.closest('.planner-container');
         if (plannerContainer instanceof HTMLElement) {
           plannerContainer.style.removeProperty('--sheet-h');
+          plannerContainer.removeAttribute('data-sheet');
         }
       }
     };

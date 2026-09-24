@@ -55,6 +55,10 @@ body {
     height: 100dvh;
     z-index: 30;
   }
+  
+  body.planner-fullscreen-mobile .planner-container .maplibregl-ctrl-top-right {
+    top: max(72px, calc(env(safe-area-inset-top) + 64px)) !important;
+  }
 }
 
 /* Attribution positioning on planner page */
@@ -77,10 +81,17 @@ body {
   .planner-container .maplibregl-ctrl-bottom-left {
     bottom: calc(var(--sheet-h, 120px) + 8px) !important;
     left: max(8px, env(safe-area-inset-left)) !important;
-    transition: bottom 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: bottom 0.3s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s;
+  }
+  
+  .planner-container[data-sheet="expanded"] .maplibregl-ctrl-bottom-left {
+    opacity: 0;
+    pointer-events: none;
   }
   
   body.planner-fullscreen-mobile .planner-container .maplibregl-ctrl-bottom-left {
     bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    opacity: 1;
+    pointer-events: auto;
   }
 }
