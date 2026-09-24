@@ -1,12 +1,12 @@
-import { redirect } from "next/navigation";
-import { createDemoSession, getSessionUser } from "@/lib/auth";
+import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 
 export default async function LandingPage() {
-  let user = await getSessionUser();
-  
+  const user = await getSessionUser();
+
   if (!user) {
-    user = await createDemoSession();
+    redirect("/api/auth/init");
   }
 
   const sampleTour = await prisma.tour.findFirst({
