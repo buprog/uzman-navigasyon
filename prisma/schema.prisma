@@ -18,8 +18,6 @@ model User {
   googleSub      String?  @unique // future Google subject id
   gender         String   @default("UNSPECIFIED") // MALE | FEMALE | UNSPECIFIED
   themePreference String?  // null = automatic (based on gender), or: neutral | female | male
-  colorModePreference String?  // null = system (prefers-color-scheme), or: light | dark
-  weatherThemeEnabled Boolean  @default(false) // whether to apply weather-based theme variants
   // KVKK compliance
   consentGiven      Boolean  @default(false)
   consentTimestamp  DateTime?

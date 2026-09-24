@@ -1,10 +1,8 @@
 import { cookies } from "next/headers";
-import { Theme, ColorMode, Gender, ThemePreference, ColorModePreference, resolveTheme } from "./theme";
+import { Theme, Gender, ThemePreference, resolveTheme } from "./theme";
 
 const THEME_COOKIE = "un_theme";
 const PREVIEW_THEME_COOKIE = "un_preview_theme";
-const MODE_COOKIE = "un_mode";
-const PREVIEW_MODE_COOKIE = "un_preview_mode";
 
 /**
  * Get theme from server-side (for SSR)
@@ -42,43 +40,3 @@ export function getServerTheme(
   return resolveTheme(user.themePreference, user.gender);
 }
 
-/**
- * Get color mode from server-side (for SSR)
- * Returns explicit mode or null for system (client will detect via prefers-color-scheme)
- */
-export function getServerMode(
-  user?: {
-    colorModePreference: ColorModePreference;
-  },
-  previewModeParam?: string | null
-): ColorMode | null {
-  // Check for preview mode parameter (for /onizleme iframe)
-  if (previewModeParam) {
-    if (previewModeParam === "light" || previewModeParam === "dark") {
-      return previewModeParam;
-    }
-    if (previewModeParam === "system") {
-      return null; // Let client handle system detection
-    }
-  }
-
-  // Check for preview mode cookie (for /onizleme)
-  const previewMode = cookies().get(PREVIEW_MODE_COOKIE)?.value;
-  if (previewMode === "light" || previewMode === "dark") {
-    return previewMode;
-  }
-
-  // Check for guest mode cookie
-  const guestMode = cookies().get(MODE_COOKIE)?.value;
-  
-  if (!user) {
-    // Guest user
-    if (guestMode === "light" || guestMode === "dark") {
-      return guestMode;
-    }
-    return null; // System
-  }
-
-  // Logged-in user
-  return user.colorModePreference as ColorMode | null;
-}

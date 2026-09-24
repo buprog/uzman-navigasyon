@@ -4,16 +4,14 @@ import { useState } from "react";
 
 type DeviceType = "iphone" | "android";
 type ThemePreview = "female" | "male" | "neutral";
-type ModePreview = "light" | "dark" | "system";
-type WeatherPreview = "none" | "clear" | "cloudy" | "rain" | "snow";
+type DayNightPreview = "auto" | "day" | "night";
 
 export default function PreviewPage() {
   const [device, setDevice] = useState<DeviceType>("iphone");
   const [themePreview, setThemePreview] = useState<ThemePreview>("neutral");
-  const [modePreview, setModePreview] = useState<ModePreview>("system");
-  const [weatherPreview, setWeatherPreview] = useState<WeatherPreview>("none");
+  const [dayNightPreview, setDayNightPreview] = useState<DayNightPreview>("auto");
   
-  const iframeUrl = `/?previewTheme=${themePreview}&previewMode=${modePreview}&previewWeather=${weatherPreview}`;
+  const iframeUrl = `/?previewTheme=${themePreview}${dayNightPreview !== "auto" ? `&previewMode=${dayNightPreview}` : ""}`;
   
   // Device dimensions
   const dimensions = {
@@ -118,100 +116,44 @@ export default function PreviewPage() {
               </div>
             </div>
 
-            {/* Color mode simulator */}
+            {/* Day/Night simulator */}
             <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
               <h3 className="text-sm font-semibold text-white mb-3">
-                Karanlık Mod
+                Gündüz / Gece
               </h3>
               <div className="space-y-2">
                 <button
-                  onClick={() => setModePreview("light")}
+                  onClick={() => setDayNightPreview("auto")}
                   className={`w-full px-4 py-2 rounded-lg text-left transition ${
-                    modePreview === "light"
-                      ? "bg-yellow-600 text-white"
-                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                  }`}
-                >
-                  ☀️ Açık
-                </button>
-                <button
-                  onClick={() => setModePreview("dark")}
-                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
-                    modePreview === "dark"
-                      ? "bg-indigo-600 text-white"
-                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                  }`}
-                >
-                  🌙 Karanlık
-                </button>
-                <button
-                  onClick={() => setModePreview("system")}
-                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
-                    modePreview === "system"
+                    dayNightPreview === "auto"
                       ? "bg-purple-600 text-white"
                       : "bg-slate-700 text-slate-300 hover:bg-slate-600"
                   }`}
                 >
-                  💻 Sistem
+                  🔄 Otomatik
+                  <span className="block text-xs opacity-75">Gün doğumu/batımına göre</span>
                 </button>
-              </div>
-            </div>
-
-            {/* Weather simulator */}
-            <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <h3 className="text-sm font-semibold text-white mb-3">
-                Hava Durumu Taklidi
-              </h3>
-              <div className="space-y-2">
                 <button
-                  onClick={() => setWeatherPreview("none")}
+                  onClick={() => setDayNightPreview("day")}
                   className={`w-full px-4 py-2 rounded-lg text-left transition ${
-                    weatherPreview === "none"
-                      ? "bg-slate-600 text-white"
+                    dayNightPreview === "day"
+                      ? "bg-yellow-600 text-white"
                       : "bg-slate-700 text-slate-300 hover:bg-slate-600"
                   }`}
                 >
-                  🚫 Yok
+                  ☀️ Gündüz
+                  <span className="block text-xs opacity-75">Açık palet</span>
                 </button>
                 <button
-                  onClick={() => setWeatherPreview("clear")}
+                  onClick={() => setDayNightPreview("night")}
                   className={`w-full px-4 py-2 rounded-lg text-left transition ${
-                    weatherPreview === "clear"
-                      ? "bg-amber-600 text-white"
+                    dayNightPreview === "night"
+                      ? "bg-indigo-600 text-white"
                       : "bg-slate-700 text-slate-300 hover:bg-slate-600"
                   }`}
                 >
-                  ☀️ Güneşli
-                </button>
-                <button
-                  onClick={() => setWeatherPreview("cloudy")}
-                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
-                    weatherPreview === "cloudy"
-                      ? "bg-gray-600 text-white"
-                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                  }`}
-                >
-                  ☁️ Bulutlu
-                </button>
-                <button
-                  onClick={() => setWeatherPreview("rain")}
-                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
-                    weatherPreview === "rain"
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                  }`}
-                >
-                  🌧️ Yağmurlu
-                </button>
-                <button
-                  onClick={() => setWeatherPreview("snow")}
-                  className={`w-full px-4 py-2 rounded-lg text-left transition ${
-                    weatherPreview === "snow"
-                      ? "bg-cyan-600 text-white"
-                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                  }`}
-                >
-                  ❄️ Karlı
+                  🌙 Gece
+                  <span className="block text-xs opacity-75">Koyu palet</span>
                 </button>
               </div>
             </div>
@@ -219,8 +161,8 @@ export default function PreviewPage() {
             {/* Info */}
             <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
               <p className="text-xs text-slate-400">
-                💡 Tema, mod ve hava durumu taklidi gerçek hesap verilerinizi değiştirmez, sadece önizleme içindir.
-                Tüm kombinasyonları (3 tema × 2 mod × 5 hava) test edebilirsiniz.
+                💡 Tema ve gündüz/gece taklidi gerçek hesap verilerinizi değiştirmez, sadece önizleme içindir.
+                Tüm 6 kombinasyonu (3 tema × 2 zaman) test edebilirsiniz.
               </p>
             </div>
           </div>
@@ -251,7 +193,7 @@ export default function PreviewPage() {
 
               {/* iframe */}
               <iframe
-                key={`${device}-${themePreview}-${modePreview}-${weatherPreview}`}
+                key={`${device}-${themePreview}-${dayNightPreview}`}
                 src={iframeUrl}
                 className="w-full h-full rounded-[2.5rem] bg-white"
                 style={{

@@ -3,9 +3,9 @@ import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { AdBanner } from "@/components/AdBanner";
+import { DayNightDetector } from "@/components/DayNightDetector";
 import { getSessionUser } from "@/lib/auth";
-import { getServerTheme, getServerMode } from "@/lib/theme.server";
-import { getServerWeatherCondition } from "@/lib/weather.server";
+import { getServerTheme } from "@/lib/theme.server";
 
 export const metadata: Metadata = {
   title: "Uzman Navigasyon",
@@ -43,13 +43,12 @@ export default async function RootLayout({
 }: { 
   children: React.ReactNode;
   params?: any;
-  searchParams?: { previewTheme?: string; previewMode?: string; previewWeather?: string };
+  searchParams?: { previewTheme?: string; previewMode?: string };
 }) {
-  // Resolve theme and mode server-side to prevent flash
+  // Resolve theme server-side to prevent flash
   const user = await getSessionUser();
   const previewTheme = searchParams?.previewTheme;
   const previewMode = searchParams?.previewMode;
-  const previewWeather = searchParams?.previewWeather;
   
   const theme = getServerTheme(
     user ? {
@@ -59,102 +58,57 @@ export default async function RootLayout({
     previewTheme
   );
 
-  const mode = getServerMode(
-    user ? {
-      colorModePreference: user.colorModePreference as "light" | "dark" | null,
-    } : undefined,
-    previewMode
-  );
-
-  // Get weather condition for preview mode
-  const weatherCondition = getServerWeatherCondition(previewWeather);
+  // For preview mode, set explicit day/night
+  const explicitMode = previewMode === "day" || previewMode === "night" ? previewMode : undefined;
 
   return (
     <html 
       lang="tr" 
-      data-theme={theme} 
-      data-mode={mode || undefined}
-      data-weather={weatherCondition || undefined}
+      data-theme={theme}
+      data-mode={explicitMode}
     >
       <head>
-        {/* Inline script to detect system color scheme and prevent flash */}
-        {!mode && (
+        {/* Inline script for day/night mode detection - prevents flash */}
+        {!explicitMode && (
           <script
             dangerouslySetInnerHTML={{
               __html: `
                 (function() {
                   try {
-                    const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
-                    const applyMode = (isDark) => {
-                      document.documentElement.setAttribute('data-mode', isDark ? 'dark' : 'light');
-                    };
-                    applyMode(darkQuery.matches);
-                    darkQuery.addEventListener('change', (e) => applyMode(e.matches));
-                  } catch (e) {}
-                })();
-              `,
-            }}
-          />
-        )}
-        {/* Inline script for client-side weather detection */}
-        {!weatherCondition && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                (function() {
-                  try {
-                    // Check if weather theme is enabled
-                    const user = ${user ? `{weatherThemeEnabled: ${user.weatherThemeEnabled}}` : 'null'};
-                    const guestEnabled = document.cookie.split(';').find(c => c.trim().startsWith('un_weather_theme='))?.split('=')[1] === 'true';
-                    const enabled = user ? user.weatherThemeEnabled : guestEnabled;
+                    // Check cache first for today's sunrise/sunset
+                    const cached = localStorage.getItem('un_daynight_cache');
+                    const now = new Date();
+                    const today = now.toISOString().split('T')[0];
                     
-                    if (!enabled) return;
-                    
-                    // Check cache first
-                    try {
-                      const cached = localStorage.getItem('un_weather_cache');
-                      if (cached) {
+                    if (cached) {
+                      try {
                         const data = JSON.parse(cached);
-                        const age = Date.now() - data.timestamp;
-                        if (age < 30 * 60 * 1000) { // 30 min
-                          document.documentElement.setAttribute('data-weather', data.condition);
+                        if (data.date === today) {
+                          // Use cached sunrise/sunset
+                          const sunrise = new Date(data.sunrise);
+                          const sunset = new Date(data.sunset);
+                          const time = now.getTime();
+                          const mode = time >= sunrise.getTime() && time < sunset.getTime() ? 'day' : 'night';
+                          document.documentElement.setAttribute('data-mode', mode);
+                          
+                          // Schedule re-check at next transition
+                          const nextCheck = mode === 'day' ? sunset : 
+                            (time < sunrise.getTime() ? sunrise : new Date(sunrise.getTime() + 24*60*60*1000));
+                          const delay = Math.max(1000, nextCheck.getTime() - time);
+                          setTimeout(() => location.reload(), delay);
                           return;
                         }
-                      }
-                    } catch (e) {}
-                    
-                    // Fetch weather if geolocation is already granted
-                    if (navigator.permissions) {
-                      navigator.permissions.query({name: 'geolocation'}).then(result => {
-                        if (result.state === 'granted') {
-                          navigator.geolocation.getCurrentPosition(
-                            pos => {
-                              const lat = Math.round(pos.coords.latitude * 100) / 100;
-                              const lng = Math.round(pos.coords.longitude * 100) / 100;
-                              fetch('/api/hava?lat=' + lat + '&lng=' + lng)
-                                .then(r => r.json())
-                                .then(data => {
-                                  if (data.condition) {
-                                    document.documentElement.setAttribute('data-weather', data.condition);
-                                    try {
-                                      localStorage.setItem('un_weather_cache', JSON.stringify({
-                                        condition: data.condition,
-                                        timestamp: Date.now(),
-                                        lat: lat,
-                                        lng: lng
-                                      }));
-                                    } catch (e) {}
-                                  }
-                                })
-                                .catch(() => {});
-                            },
-                            () => {},
-                            { timeout: 5000, maximumAge: 30 * 60 * 1000 }
-                          );
-                        }
-                      }).catch(() => {});
+                      } catch (e) {}
                     }
-                  } catch (e) {}
+                    
+                    // Fallback: Use time-based 07:00-19:00 local
+                    const hours = now.getHours();
+                    const mode = hours >= 7 && hours < 19 ? 'day' : 'night';
+                    document.documentElement.setAttribute('data-mode', mode);
+                  } catch (e) {
+                    // Ultimate fallback
+                    document.documentElement.setAttribute('data-mode', 'day');
+                  }
                 })();
               `,
             }}
@@ -162,6 +116,7 @@ export default async function RootLayout({
         )}
       </head>
       <body>
+        <DayNightDetector />
         <Nav />
         <InstallPrompt />
         <main className="min-h-[calc(100vh-57px)] pb-24">{children}</main>
