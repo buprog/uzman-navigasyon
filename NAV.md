@@ -4,25 +4,30 @@ Uzman Navigasyon uygulamasına eklenen gerçek zamanlı navigasyon özelliği.
 
 ## Özellikler
 
-### 1. Adım Adım Sesli Yönlendirme
-- **Web Speech API** (TTS) kullanılarak Türkçe sesli talimatlar
-- Her manevra için otomatik ses duyurusu
-- Dil: `tr-TR` (Türkçe)
-- Kullanıcı etkileşimi sonrası TTS aktif olur (tarayıcı güvenlik politikası)
+### 1. Görsel Yönlendirme
+- **Adım adım ekran talimatları** (mesafe + manevra açıklaması)
+- Sonraki manevra kartı: büyük ok simgesi ve talimat
+- Anlık mesafe güncellemesi
 
-### 2. Gerçek Zamanlı Konum Takibi
+### 2. Sesli Yönlendirme (v1'de kapalı - yakında)
+- Web Speech API (TTS) iskeleti yerinde
+- Feature flag: `VOICE_NAV_ENABLED = false`
+- Türkçe (`tr-TR`) sesli talimat altyapısı hazır ama şimdilik devre dışı
+- UI'da "🔇 Sesli yön (yakında)" etiketi
+
+### 3. Gerçek Zamanlı Konum Takibi
 - **Geolocation API** `watchPosition` ile sürekli konum güncellemesi
 - Yüksek doğruluk modu (`enableHighAccuracy: true`)
 - Haritada mavi nokta ile canlı konum gösterimi
 - Anlık hız göstergesi (km/h)
 
-### 3. Sapma Durumunda Yeniden Rota Hesaplama
+### 4. Sapma Durumunda Yeniden Rota Hesaplama
 - Rotadan ~50 metre sapma algılandığında otomatik yeniden hesaplama
 - Debounce mekanizması ile gereksiz hesaplama spam'i önlenir (2 saniye bekleme)
 - OSRM ile dinamik rota güncelleme
 - Görsel uyarı: rotadan çıkınca rota çizgisi kırmızıya döner
 
-### 4. Çok Duraklı Navigasyon
+### 5. Çok Duraklı Navigasyon
 - Tur planlayıcıdaki tüm aktif durakları sırayla ziyaret eder
 - Her durağa ulaşıldığında otomatik olarak bir sonraki durağa yönlendirir
 - Durak sayacı: "Durak 2 / 5" gibi ilerleme gösterir
@@ -85,18 +90,21 @@ Uzman Navigasyon uygulamasına eklenen gerçek zamanlı navigasyon özelliği.
 - Rota koordinatlarına minimum mesafe hesaplanır (Haversine)
 - Eşik aşıldığında 2 saniye sonra yeniden hesaplama başlar
 
-### Sesli Talimat Örnekleri
+### Sesli Talimat Örnekleri (v1'de kapalı - kod iskeleti)
+Gelecekte etkinleştirildiğinde:
 - "Yola çıkın"
 - "Dönün sağa"
 - "Dönel kavşağa girin"
 - "Hedefe ulaştınız"
 - "Rota yeniden hesaplanıyor"
 
+**v1 Durumu:** Tüm `speakInstruction()` çağrıları şimdilik no-op (hiçbir şey yapmaz).
+
 ## Kısıtlamalar
 
 ### Tarayıcı Gereksinimleri
 - **Geolocation API** desteği gerekli (tüm modern tarayıcılarda var)
-- **Web Speech API** (TTS) desteği (Chrome, Edge, Safari destekler; Firefox kısıtlı)
+- **Web Speech API** (TTS) iskeleti var ama v1'de kullanılmıyor
 - **HTTPS** veya `localhost` gerekli (güvenlik politikası)
 
 ### OSRM Limitleri
@@ -105,9 +113,10 @@ Uzman Navigasyon uygulamasına eklenen gerçek zamanlı navigasyon özelliği.
 - Üretim için kendi OSRM sunucusu önerilir
 
 ### Bilinen Sorunlar
-1. **TTS İlk Kullanımda Sessiz:**
-   - Tarayıcı güvenlik politikası gereği ilk ses kullanıcı etkileşimi sonrası çalışır
-   - İlk tıklamadan sonra sesler aktif olur
+1. **Sesli Yönlendirme v1'de Kapalı:**
+   - Kod iskeleti hazır ama `VOICE_NAV_ENABLED = false`
+   - Gelecek versiyonda aktifleştirilecek
+   - UI'da "🔇 Sesli yön (yakında)" etiketi
 
 2. **Emülatörde Gerçek GPS Yok:**
    - Chrome DevTools Sensors kullanarak manuel konum simüle edin
@@ -149,6 +158,8 @@ src/
 - Tamamen tarayıcı API'leri (Geolocation, Web Speech API)
 
 ### Gelecek İyileştirmeler
+- [ ] Sesli yönlendirme (TTS) etkinleştirme
+- [ ] Ses seviyesi ve hız ayarları
 - [ ] Offline harita desteği (Service Worker + cache)
 - [ ] Trafik bilgisi entegrasyonu (ücretli API gerekir)
 - [ ] Alternatif rotalar öneri
@@ -166,7 +177,7 @@ src/
 ✅ Mavi nokta ile kullanıcı konumu takip ediliyor  
 ✅ Sonraki manevra kartı görünüyor (mesafe + talimat)  
 ✅ Konum değişiminde mesafe güncellenmeye başlıyor  
-✅ En az bir manevra sesli olarak duyuruluyor (TTS)  
+✅ "🔇 Sesli yön (yakında)" etiketi görünüyor (v1'de sesli yok)  
 ✅ Rotadan sapma simüle edilince "Rota yeniden hesaplanıyor" uyarısı ve kırmızı çizgi  
 ✅ Yeniden hesaplama sonrası mavi rota dönüyor  
 ✅ "Bitir" butonu ile navigasyon sonlandırılıyor ve planlayıcıya dönülüyor  
@@ -194,9 +205,8 @@ src/
 - HTTP yerine HTTPS veya localhost kullandığınızdan emin olun
 
 ### Sesler çalışmıyor
-- İlk kullanımda bir butona tıkladıktan sonra TTS aktif olur
-- Tarayıcı ses ayarlarını kontrol edin
-- Firefox'ta TTS desteği sınırlı, Chrome kullanın
+- **v1'de normal:** Sesli yönlendirme şimdilik kapalı
+- Gelecek versiyonda TTS etkinleştirilecek
 
 ### GPS sinyali alınamıyor
 - Dışarı çıkın veya pencere kenarına gidin

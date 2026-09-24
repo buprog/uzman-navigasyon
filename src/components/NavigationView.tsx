@@ -10,6 +10,7 @@ import {
   haversineDistance,
   isOffRoute,
   speakInstruction,
+  VOICE_NAV_ENABLED,
   type NavigationRoute,
   type NavigationStep,
 } from "@/lib/navigation";
@@ -372,7 +373,7 @@ export function NavigationView({ stops, onExit }: Props) {
           </div>
           <p className="mt-4 text-xs text-slate-400">
             💡 Not: HTTPS veya localhost üzerinden erişim gereklidir. Emülatör
-            kullanıyorsanız konum simülasyonu etkinleştirin.
+            kullanıyorsanız konum simülasyonu etkinleştirin. Sesli yönlendirme v1&apos;de kapalı.
           </p>
         </div>
       </div>
@@ -404,6 +405,11 @@ export function NavigationView({ stops, onExit }: Props) {
                   {formatDistance(distanceToNextStep)}
                 </p>
                 <p className="mt-1 text-base text-slate-600">{nextStep.instruction}</p>
+                {!VOICE_NAV_ENABLED && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    🔇 Sesli yön (yakında)
+                  </p>
+                )}
               </div>
               <div className="ml-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-500 text-3xl text-white">
                 →
