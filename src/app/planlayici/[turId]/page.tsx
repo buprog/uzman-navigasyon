@@ -246,6 +246,12 @@ export default function PlanlayiciPage() {
         <Link href={`/turlar/${tour.id}/kalkislar`} className="btn-secondary !py-1.5">
           Kalkışlar / Paylaş
         </Link>
+        <Link
+          href={`/navigasyon/${tour.id}`}
+          className="btn-primary !py-1.5 !bg-blue-600 hover:!bg-blue-700"
+        >
+          🧭 Navigasyonu Başlat
+        </Link>
         <button className="btn-secondary !py-1.5" onClick={() => window.print()}>
           Yazdır
         </button>
