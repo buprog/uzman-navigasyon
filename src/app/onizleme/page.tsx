@@ -6,12 +6,18 @@ type DeviceType = "iphone" | "android";
 type ThemePreview = "female" | "male" | "neutral";
 type DayNightPreview = "auto" | "day" | "night";
 
+const BRIGHTNESS_MIN = 50;
+const BRIGHTNESS_MAX = 150;
+const BRIGHTNESS_DEFAULT = 100;
+const BRIGHTNESS_STEP = 5;
+
 export default function PreviewPage() {
   const [device, setDevice] = useState<DeviceType>("iphone");
   const [themePreview, setThemePreview] = useState<ThemePreview>("neutral");
   const [dayNightPreview, setDayNightPreview] = useState<DayNightPreview>("auto");
+  const [brightnessPreview, setBrightnessPreview] = useState(BRIGHTNESS_DEFAULT);
   
-  const iframeUrl = `/?previewTheme=${themePreview}${dayNightPreview !== "auto" ? `&previewMode=${dayNightPreview}` : ""}`;
+  const iframeUrl = `/?previewTheme=${themePreview}${dayNightPreview !== "auto" ? `&previewMode=${dayNightPreview}` : ""}${brightnessPreview !== BRIGHTNESS_DEFAULT ? `&previewBrightness=${brightnessPreview}` : ""}`;
   
   // Device dimensions
   const dimensions = {
@@ -158,11 +164,43 @@ export default function PreviewPage() {
               </div>
             </div>
 
+            {/* Brightness slider */}
+            <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+              <h3 className="text-sm font-semibold text-white mb-3">Parlaklık</h3>
+              <div className="space-y-2">
+                <label htmlFor="brightness-preview" className="block text-xs text-slate-400">
+                  {brightnessPreview}%
+                </label>
+                <input
+                  id="brightness-preview"
+                  type="range"
+                  min={BRIGHTNESS_MIN}
+                  max={BRIGHTNESS_MAX}
+                  step={BRIGHTNESS_STEP}
+                  value={brightnessPreview}
+                  onChange={(e) => setBrightnessPreview(parseInt(e.target.value, 10))}
+                  className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-teal-600"
+                />
+                <div className="flex justify-between text-xs text-slate-500">
+                  <span>{BRIGHTNESS_MIN}%</span>
+                  <span>{BRIGHTNESS_DEFAULT}%</span>
+                  <span>{BRIGHTNESS_MAX}%</span>
+                </div>
+                {brightnessPreview !== BRIGHTNESS_DEFAULT && (
+                  <button
+                    onClick={() => setBrightnessPreview(BRIGHTNESS_DEFAULT)}
+                    className="text-xs text-teal-400 hover:text-teal-300"
+                  >
+                    🔄 Sıfırla
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Info */}
             <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
               <p className="text-xs text-slate-400">
-                💡 Tema ve gündüz/gece taklidi gerçek hesap verilerinizi değiştirmez, sadece önizleme içindir.
-                Tüm 6 kombinasyonu (3 tema × 2 zaman) test edebilirsiniz.
+                💡 Tema, gündüz/gece ve parlaklık taklidi gerçek hesap verilerinizi değiştirmez, sadece önizleme içindir.
               </p>
             </div>
           </div>
@@ -193,7 +231,7 @@ export default function PreviewPage() {
 
               {/* iframe */}
               <iframe
-                key={`${device}-${themePreview}-${dayNightPreview}`}
+                key={`${device}-${themePreview}-${dayNightPreview}-${brightnessPreview}`}
                 src={iframeUrl}
                 className="w-full h-full rounded-[2.5rem] bg-white"
                 style={{

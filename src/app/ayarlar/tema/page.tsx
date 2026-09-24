@@ -3,6 +3,16 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { THEME_LABELS } from "@/lib/theme";
+import { 
+  BRIGHTNESS_MIN, 
+  BRIGHTNESS_MAX, 
+  BRIGHTNESS_DEFAULT, 
+  BRIGHTNESS_STEP,
+  getBrightnessFromStorage,
+  setBrightnessInStorage,
+  applyBrightness,
+  formatBrightnessForAria
+} from "@/lib/brightness";
 
 type ThemePreference = "neutral" | "female" | "male" | null;
 
@@ -10,19 +20,26 @@ export default function ThemeSettingsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<ThemePreference>(null);
+  const [brightness, setBrightness] = useState(BRIGHTNESS_DEFAULT);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    // Fetch current user to get theme preference
+    // Fetch current user to get theme and brightness preferences
     async function fetchUser() {
       try {
         const res = await fetch("/api/auth/me");
         if (res.ok) {
           const data = await res.json();
           setCurrentTheme(data.user?.themePreference || null);
+          const userBrightness = data.user?.brightness || getBrightnessFromStorage();
+          setBrightness(userBrightness);
+        } else {
+          // Guest user - use localStorage
+          setBrightness(getBrightnessFromStorage());
         }
       } catch (err) {
         console.error("Failed to fetch user:", err);
+        setBrightness(getBrightnessFromStorage());
       }
     }
     fetchUser();
@@ -55,6 +72,30 @@ export default function ThemeSettingsPage() {
     }
   }
 
+  function handleBrightnessChange(value: number) {
+    setBrightness(value);
+    setBrightnessInStorage(value);
+    applyBrightness(value);
+  }
+
+  async function handleBrightnessSave() {
+    try {
+      await fetch("/api/account/brightness", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brightness }),
+      });
+    } catch (err) {
+      console.error("Failed to save brightness:", err);
+    }
+  }
+
+  function handleBrightnessReset() {
+    handleBrightnessChange(BRIGHTNESS_DEFAULT);
+    handleBrightnessSave();
+    setMessage("✅ Parlaklık sıfırlandı");
+  }
+
   const themes: { value: ThemePreference; label: string; preview: string }[] = [
     { value: null, label: THEME_LABELS.null, preview: "Cinsiyetinize göre otomatik tema" },
     { value: "neutral", label: THEME_LABELS.neutral, preview: "Varsayılan temiz görünüm" },
@@ -65,10 +106,54 @@ export default function ThemeSettingsPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Tema Ayarları</h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">Görünüm Ayarları</h1>
         <p className="text-sm text-slate-600">
-          Uygulamanın temasını kişiselleştirin
+          Uygulamanın tema ve parlaklığını kişiselleştirin
         </p>
+      </div>
+
+      {/* Brightness Slider */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">Parlaklık</h2>
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="brightness-slider" className="block text-sm text-slate-700 mb-2">
+              Ekran parlaklığı: <span className="font-semibold">{brightness}%</span>
+            </label>
+            <input
+              id="brightness-slider"
+              type="range"
+              min={BRIGHTNESS_MIN}
+              max={BRIGHTNESS_MAX}
+              step={BRIGHTNESS_STEP}
+              value={brightness}
+              onChange={(e) => handleBrightnessChange(parseInt(e.target.value, 10))}
+              onMouseUp={handleBrightnessSave}
+              onTouchEnd={handleBrightnessSave}
+              aria-label="Parlaklık ayarı"
+              aria-valuetext={formatBrightnessForAria(brightness)}
+              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
+            />
+            <div className="flex justify-between text-xs text-slate-500 mt-1">
+              <span>{BRIGHTNESS_MIN}%</span>
+              <span>{BRIGHTNESS_DEFAULT}%</span>
+              <span>{BRIGHTNESS_MAX}%</span>
+            </div>
+          </div>
+          
+          {brightness !== BRIGHTNESS_DEFAULT && (
+            <button
+              onClick={handleBrightnessReset}
+              className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition"
+            >
+              🔄 Sıfırla (100%)
+            </button>
+          )}
+          
+          <p className="text-xs text-slate-600">
+            💡 Bu ayar sadece uygulamanın parlaklığını değiştirir, cihazınızın ekran parlaklığını etkilemez.
+          </p>
+        </div>
       </div>
 
       {/* Theme Selector */}

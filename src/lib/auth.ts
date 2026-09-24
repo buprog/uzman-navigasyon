@@ -60,6 +60,7 @@ export async function getSessionUser() {
       plan: true,
       gender: true,
       themePreference: true,
+      brightness: true,
     },
   });
 }

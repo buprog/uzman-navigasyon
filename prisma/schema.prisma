@@ -18,6 +18,7 @@ model User {
   googleSub      String?  @unique // future Google subject id
   gender         String   @default("UNSPECIFIED") // MALE | FEMALE | UNSPECIFIED
   themePreference String?  // null = automatic (based on gender), or: neutral | female | male
+  brightness     Int?     // brightness percentage (50-150), null = 100% default
   // KVKK compliance
   consentGiven      Boolean  @default(false)
   consentTimestamp  DateTime?
