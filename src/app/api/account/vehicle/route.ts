@@ -16,6 +16,7 @@ const vehicleSelect = {
   preferTolls: true,
   odometerKm: true,
   tireTreadMm: true,
+  autoStopNotifications: true,
 } as const;
 
 export async function GET() {
@@ -50,6 +51,7 @@ export async function PATCH(req: Request) {
     preferTolls?: boolean;
     odometerKm?: number | null;
     tireTreadMm?: number | null;
+    autoStopNotifications?: boolean;
   } = {};
 
   if ("vehicleMake" in body) {
@@ -109,6 +111,9 @@ export async function PATCH(req: Request) {
       }
       data.tireTreadMm = n;
     }
+  }
+  if ("autoStopNotifications" in body) {
+    data.autoStopNotifications = Boolean(body.autoStopNotifications);
   }
 
   const vehicle = await prisma.user.update({
