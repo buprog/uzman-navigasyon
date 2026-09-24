@@ -163,3 +163,23 @@ model PaymentRecord {
   @@index([emailNormalized])
   @@index([deviceId])
 }
+
+model Ad {
+  id            String    @id @default(cuid())
+  title         String    // e.g. "Kapadokya balon turu"
+  text          String    // short banner text
+  imageUrl      String    // image path or URL
+  detailContent String    @default("") // full ad content for detail page
+  targetGender  String    @default("ALL") // ALL | MALE | FEMALE
+  active        Boolean   @default(true)
+  startDate     DateTime? // campaign start (null = no start limit)
+  endDate       DateTime? // campaign end (null = no end limit)
+  sortOrder     Int       @default(0) // display priority
+  impressions   Int       @default(0) // aggregate counter
+  clicks        Int       @default(0) // aggregate counter
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([active, startDate, endDate])
+  @@index([targetGender])
+}

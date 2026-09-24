@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { AdBanner } from "@/components/AdBanner";
 
 export const metadata: Metadata = {
   title: "Uzman Navigasyon",
@@ -38,7 +39,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Nav />
         <InstallPrompt />
-        <main className="min-h-[calc(100vh-57px)]">{children}</main>
+        <main className="min-h-[calc(100vh-57px)] pb-24">{children}</main>
+        <AdBanner hideOnPages={["/navigasyon", "/__console"]} />
       </body>
     </html>
   );

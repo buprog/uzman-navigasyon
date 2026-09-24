@@ -38,6 +38,7 @@ export default function KVKKPage() {
             <li>Kullanıcı hesabı oluşturma ve kimlik doğrulama</li>
             <li>Premium abonelik yönetimi ve ödeme işleme</li>
             <li>Hizmet kişiselleştirme (cinsiyet bilgisi belirtildiyse)</li>
+            <li>Size uygun reklam ve içerik gösterimi (cinsiyet bilgisi belirtildiyse ve rıza verdiyseniz)</li>
             <li>İlk yolculuk deneme süresi takibi (cihaz bazlı, anonim)</li>
             <li>Kampanya uygunluğu kontrolü (e-posta bazlı, 15 günlük pencere)</li>
             <li>Müşteri destek ve iletişim</li>
@@ -116,9 +117,22 @@ export default function KVKKPage() {
         </section>
 
         <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-3">10. Reklam ve İçerik Kişiselleştirme</h2>
+          <p className="text-slate-700 mb-2">
+            Uygulamamızda gösterilen reklamlar ve içerikler:
+          </p>
+          <ul className="list-disc pl-6 text-slate-700">
+            <li><strong>Misafir kullanıcılar</strong>: Genel (ALL) hedefli reklamlar gösterilir, kişiselleştirme yapılmaz</li>
+            <li><strong>Kayıtlı kullanıcılar (rıza verdiyse)</strong>: Cinsiyet bilgisi belirtildiyse ve açık rıza verilmişse, size uygun reklamlar gösterilebilir</li>
+            <li><strong>Takip</strong>: Reklam gösterimleri ve tıklamaları yalnızca toplam sayı olarak saklanır (kullanıcı bazlı izleme yapılmaz)</li>
+            <li><strong>Premium kullanıcılar</strong>: Sistem ayarlarına göre reklamsız deneyim sunulabilir</li>
+          </ul>
+        </section>
+
+        <section className="mb-8">
           <p className="text-sm text-slate-500">
             <strong>Son güncelleme</strong>: 24 Eylül 2026<br />
-            <strong>Metin versiyonu</strong>: v1.1
+            <strong>Metin versiyonu</strong>: v1.2
           </p>
         </section>
       </div>
