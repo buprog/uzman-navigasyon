@@ -588,7 +588,7 @@ export default function PlanlayiciPage() {
         </aside>
 
         {/* Map */}
-        <div className="relative min-w-0 flex-1 print:hidden" style={{ minHeight: "45vh" }}>
+        <div className="relative order-first min-w-0 flex-1 lg:order-none print:hidden" style={{ minHeight: "45vh" }}>
           <MapView
             stops={[...tour.stops]
               .filter((s) => !s.skipped)
