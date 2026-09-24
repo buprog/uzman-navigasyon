@@ -4,16 +4,18 @@ Uzman Navigasyon uygulamasına eklenen gerçek zamanlı navigasyon özelliği.
 
 ## Özellikler
 
-### 1. Görsel Yönlendirme
+### 1. Adım Adım Sesli Yönlendirme
+- **Web Speech API** (TTS) kullanılarak Türkçe sesli talimatlar
+- Her manevra için otomatik ses duyurusu
+- Dil: `tr-TR` (Türkçe)
+- UI'dan açma/kapatma: 🔊/🔇 ses toggle butonu
+- Varsayılan: sesli yön açık
+- İlk kullanımda kullanıcı etkileşimi sonrası TTS aktif olur (tarayıcı güvenlik politikası)
+
+### 2. Görsel Yönlendirme
 - **Adım adım ekran talimatları** (mesafe + manevra açıklaması)
 - Sonraki manevra kartı: büyük ok simgesi ve talimat
 - Anlık mesafe güncellemesi
-
-### 2. Sesli Yönlendirme (v1'de kapalı - yakında)
-- Web Speech API (TTS) iskeleti yerinde
-- Feature flag: `VOICE_NAV_ENABLED = false`
-- Türkçe (`tr-TR`) sesli talimat altyapısı hazır ama şimdilik devre dışı
-- UI'da "🔇 Sesli yön (yakında)" etiketi
 
 ### 3. Gerçek Zamanlı Konum Takibi
 - **Geolocation API** `watchPosition` ile sürekli konum güncellemesi
@@ -90,21 +92,20 @@ Uzman Navigasyon uygulamasına eklenen gerçek zamanlı navigasyon özelliği.
 - Rota koordinatlarına minimum mesafe hesaplanır (Haversine)
 - Eşik aşıldığında 2 saniye sonra yeniden hesaplama başlar
 
-### Sesli Talimat Örnekleri (v1'de kapalı - kod iskeleti)
-Gelecekte etkinleştirildiğinde:
+### Sesli Talimat Örnekleri
 - "Yola çıkın"
 - "Dönün sağa"
 - "Dönel kavşağa girin"
 - "Hedefe ulaştınız"
 - "Rota yeniden hesaplanıyor"
 
-**v1 Durumu:** Tüm `speakInstruction()` çağrıları şimdilik no-op (hiçbir şey yapmaz).
+**Ses Kontrolü:** Navigasyon sırasında 🔊/🔇 butonu ile açma/kapatma
 
 ## Kısıtlamalar
 
 ### Tarayıcı Gereksinimleri
 - **Geolocation API** desteği gerekli (tüm modern tarayıcılarda var)
-- **Web Speech API** (TTS) iskeleti var ama v1'de kullanılmıyor
+- **Web Speech API** (TTS) desteği (Chrome, Edge, Safari destekler; Firefox kısıtlı)
 - **HTTPS** veya `localhost` gerekli (güvenlik politikası)
 
 ### OSRM Limitleri
@@ -113,10 +114,9 @@ Gelecekte etkinleştirildiğinde:
 - Üretim için kendi OSRM sunucusu önerilir
 
 ### Bilinen Sorunlar
-1. **Sesli Yönlendirme v1'de Kapalı:**
-   - Kod iskeleti hazır ama `VOICE_NAV_ENABLED = false`
-   - Gelecek versiyonda aktifleştirilecek
-   - UI'da "🔇 Sesli yön (yakında)" etiketi
+1. **TTS İlk Kullanımda Sessiz:**
+   - Tarayıcı güvenlik politikası gereği ilk ses kullanıcı etkileşimi sonrası çalışır
+   - İlk butona tıklamadan (örn. "Konum İzni Ver ve Başlat") sonra sesler aktif olur
 
 2. **Emülatörde Gerçek GPS Yok:**
    - Chrome DevTools Sensors kullanarak manuel konum simüle edin
@@ -158,7 +158,6 @@ src/
 - Tamamen tarayıcı API'leri (Geolocation, Web Speech API)
 
 ### Gelecek İyileştirmeler
-- [ ] Sesli yönlendirme (TTS) etkinleştirme
 - [ ] Ses seviyesi ve hız ayarları
 - [ ] Offline harita desteği (Service Worker + cache)
 - [ ] Trafik bilgisi entegrasyonu (ücretli API gerekir)
@@ -177,7 +176,8 @@ src/
 ✅ Mavi nokta ile kullanıcı konumu takip ediliyor  
 ✅ Sonraki manevra kartı görünüyor (mesafe + talimat)  
 ✅ Konum değişiminde mesafe güncellenmeye başlıyor  
-✅ "🔇 Sesli yön (yakında)" etiketi görünüyor (v1'de sesli yok)  
+✅ En az bir manevra sesli olarak duyuruluyor (TTS)  
+✅ 🔊/🔇 ses toggle butonu çalışıyor  
 ✅ Rotadan sapma simüle edilince "Rota yeniden hesaplanıyor" uyarısı ve kırmızı çizgi  
 ✅ Yeniden hesaplama sonrası mavi rota dönüyor  
 ✅ "Bitir" butonu ile navigasyon sonlandırılıyor ve planlayıcıya dönülüyor  
@@ -205,8 +205,10 @@ src/
 - HTTP yerine HTTPS veya localhost kullandığınızdan emin olun
 
 ### Sesler çalışmıyor
-- **v1'de normal:** Sesli yönlendirme şimdilik kapalı
-- Gelecek versiyonda TTS etkinleştirilecek
+- İlk kullanımda bir butona tıkladıktan sonra TTS aktif olur
+- Tarayıcı ses ayarlarını kontrol edin
+- Ses toggle butonunu (🔊/🔇) kontrol edin
+- Firefox'ta TTS desteği sınırlı, Chrome kullanın
 
 ### GPS sinyali alınamıyor
 - Dışarı çıkın veya pencere kenarına gidin

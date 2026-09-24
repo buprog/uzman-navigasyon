@@ -1,7 +1,7 @@
 import type { MapStop } from "@/components/MapView";
 
-// Feature flag: sesli navigasyon v1'de kapalı
-export const VOICE_NAV_ENABLED = false;
+// Feature flag: sesli navigasyon (TTS) kullanılabilir
+export const VOICE_NAV_ENABLED = true;
 
 export type NavigationStep = {
   instruction: string;
@@ -190,9 +190,8 @@ export function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-export function speakInstruction(text: string, lang = "tr-TR"): void {
-  // Feature flag: v1'de sesli yönlendirme kapalı
-  if (!VOICE_NAV_ENABLED) {
+export function speakInstruction(text: string, lang = "tr-TR", enabled = true): void {
+  if (!enabled || !VOICE_NAV_ENABLED) {
     return;
   }
 

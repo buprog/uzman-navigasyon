@@ -39,6 +39,7 @@ export function NavigationView({ stops, onExit }: Props) {
   const [isRerouting, setIsRerouting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
 
   const currentStop = stops[currentStopIndex];
   const nextStop = stops[currentStopIndex + 1];
@@ -110,7 +111,7 @@ export function NavigationView({ stops, onExit }: Props) {
 
       rerouteTimeoutRef.current = setTimeout(() => {
         void calculateRoute(location, currentStopIndex);
-        speakInstruction("Rota yeniden hesaplanıyor");
+        speakInstruction("Rota yeniden hesaplanıyor", "tr-TR", voiceEnabled);
       }, 2000);
     },
     [calculateRoute, currentStopIndex, isRerouting]
@@ -271,7 +272,7 @@ export function NavigationView({ stops, onExit }: Props) {
 
     const stepIndex = route.steps.findIndex((s) => s === nextStep);
     if (distance < 50 && stepIndex !== lastSpokenStepRef.current) {
-      speakInstruction(nextStep.instruction);
+      speakInstruction(nextStep.instruction, "tr-TR", voiceEnabled);
       lastSpokenStepRef.current = stepIndex;
 
       if (stepIndex < route.steps.length - 1) {
@@ -283,15 +284,15 @@ export function NavigationView({ stops, onExit }: Props) {
       if (currentStopIndex < stops.length - 1) {
         setCurrentStopIndex(currentStopIndex + 1);
         void calculateRoute(currentLocation, currentStopIndex + 1);
-        speakInstruction(`${currentStop.name} hedefe ulaştınız. Bir sonraki hedefe yönlendiriliyorsunuz.`);
+        speakInstruction(`${currentStop.name} hedefe ulaştınız. Bir sonraki hedefe yönlendiriliyorsunuz.`, "tr-TR", voiceEnabled);
       } else {
-        speakInstruction("Tüm duraklara ulaştınız. Navigasyon tamamlandı.");
+        speakInstruction("Tüm duraklara ulaştınız. Navigasyon tamamlandı.", "tr-TR", voiceEnabled);
         if (watchIdRef.current !== null) {
           navigator.geolocation.clearWatch(watchIdRef.current);
         }
       }
     }
-  }, [currentLocation, route, nextStep, currentStop, currentStopIndex, stops, offRoute, isRerouting, handleReroute, calculateRoute]);
+  }, [currentLocation, route, nextStep, currentStop, currentStopIndex, stops, offRoute, isRerouting, handleReroute, calculateRoute, voiceEnabled]);
 
   useEffect(() => {
     if (!permissionGranted) return;
@@ -338,14 +339,14 @@ export function NavigationView({ stops, onExit }: Props) {
     const granted = await requestLocationPermission();
     if (granted && currentLocation) {
       await calculateRoute(currentLocation, currentStopIndex);
-      speakInstruction("Navigasyon başlatıldı");
+      speakInstruction("Navigasyon başlatıldı", "tr-TR", voiceEnabled);
     }
   };
 
   const handleRecalculate = () => {
     if (currentLocation) {
       void calculateRoute(currentLocation, currentStopIndex);
-      speakInstruction("Rota yeniden hesaplanıyor");
+      speakInstruction("Rota yeniden hesaplanıyor", "tr-TR", voiceEnabled);
     }
   };
 
@@ -373,7 +374,8 @@ export function NavigationView({ stops, onExit }: Props) {
           </div>
           <p className="mt-4 text-xs text-slate-400">
             💡 Not: HTTPS veya localhost üzerinden erişim gereklidir. Emülatör
-            kullanıyorsanız konum simülasyonu etkinleştirin. Sesli yönlendirme v1&apos;de kapalı.
+            kullanıyorsanız konum simülasyonu etkinleştirin. İlk sesli talimat
+            için kullanıcı etkileşimi (buton tıklama) gerekir.
           </p>
         </div>
       </div>
@@ -405,11 +407,6 @@ export function NavigationView({ stops, onExit }: Props) {
                   {formatDistance(distanceToNextStep)}
                 </p>
                 <p className="mt-1 text-base text-slate-600">{nextStep.instruction}</p>
-                {!VOICE_NAV_ENABLED && (
-                  <p className="mt-1 text-xs text-slate-400">
-                    🔇 Sesli yön (yakında)
-                  </p>
-                )}
               </div>
               <div className="ml-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-500 text-3xl text-white">
                 →
@@ -450,6 +447,17 @@ export function NavigationView({ stops, onExit }: Props) {
           >
             {isRerouting ? "Hesaplanıyor…" : "Yeniden Hesapla"}
           </button>
+          <button
+            onClick={() => setVoiceEnabled(!voiceEnabled)}
+            className={`px-4 py-2 rounded-lg font-medium ${
+              voiceEnabled
+                ? "bg-teal-600 text-white hover:bg-teal-700"
+                : "bg-slate-300 text-slate-600 hover:bg-slate-400"
+            }`}
+            title={voiceEnabled ? "Sesi kapat" : "Sesi aç"}
+          >
+            {voiceEnabled ? "🔊" : "🔇"}
+          </button>
           <button onClick={onExit} className="btn-danger px-6">
             Bitir
           </button>
@@ -457,6 +465,9 @@ export function NavigationView({ stops, onExit }: Props) {
 
         <p className="text-center text-xs text-slate-500">
           Durak {currentStopIndex + 1} / {stops.length}
+          {VOICE_NAV_ENABLED && voiceEnabled && (
+            <span className="ml-2 text-teal-600">• Sesli yön aktif</span>
+          )}
         </p>
       </div>
     </div>
