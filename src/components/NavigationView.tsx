@@ -17,6 +17,7 @@ import {
 import { RouteWeatherStrip, RouteWeatherStripSkeleton } from "./RouteWeatherStrip";
 import { useRouteWeather } from "@/hooks/useRouteWeather";
 import { sampleRoutePoints, calculateForecastDays } from "@/lib/routeWeather";
+import { completeTrialServerSide } from "@/lib/trial";
 
 type Props = {
   stops: MapStop[];
@@ -309,9 +310,11 @@ export function NavigationView({ stops, onExit, onFirstArrival, useMockWeather =
     }
 
     if (currentStop && haversineDistance(lat, lng, currentStop.lat, currentStop.lng) < 30) {
-      // Trigger first arrival callback once
-      if (!firstArrivalTriggeredRef.current && onFirstArrival) {
+      // Trigger first arrival callback once (but skip stop 0 - the starting point)
+      if (!firstArrivalTriggeredRef.current && onFirstArrival && currentStopIndex > 0) {
         firstArrivalTriggeredRef.current = true;
+        // Persist trial completion server-side
+        void completeTrialServerSide();
         onFirstArrival();
       }
       
@@ -386,7 +389,7 @@ export function NavigationView({ stops, onExit, onFirstArrival, useMockWeather =
 
   if (!permissionGranted) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-slate-50 p-6">
+      <div className="flex h-[calc(100dvh-57px)] flex-col items-center justify-center bg-slate-50 p-6">
         <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
           <h2 className="text-xl font-bold text-slate-800">Konum İzni Gerekli</h2>
           <p className="mt-3 text-sm text-slate-600">
@@ -417,7 +420,7 @@ export function NavigationView({ stops, onExit, onFirstArrival, useMockWeather =
   }
 
   return (
-    <div className="relative flex h-screen flex-col">
+    <div className="relative flex h-[calc(100dvh-57px)] flex-col">
       <div ref={containerRef} className="flex-1" />
 
       {!mapReady && (

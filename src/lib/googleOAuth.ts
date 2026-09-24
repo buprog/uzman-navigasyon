@@ -9,9 +9,25 @@ const GOOGLE_OAUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 
-const CALLBACK_URL = process.env.NEXT_PUBLIC_BASE_URL 
-  ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth/google/callback`
-  : 'http://localhost:3000/api/oauth/google/callback';
+/**
+ * Build callback URL from request or env
+ */
+export function getCallbackUrl(request?: Request): string {
+  // Use server-only env var if set
+  if (process.env.APP_BASE_URL) {
+    return `${process.env.APP_BASE_URL}/api/oauth/google/callback`;
+  }
+  
+  // Derive from request headers
+  if (request) {
+    const proto = request.headers.get('x-forwarded-proto') || 'http';
+    const host = request.headers.get('host') || 'localhost:3000';
+    return `${proto}://${host}/api/oauth/google/callback`;
+  }
+  
+  // Fallback
+  return 'http://localhost:3000/api/oauth/google/callback';
+}
 
 /**
  * Generate PKCE code verifier and challenge
@@ -38,7 +54,8 @@ export function generateRandomString(length: number = 32): string {
 export function buildAuthorizationUrl(
   state: string,
   codeChallenge: string,
-  nonce: string
+  nonce: string,
+  callbackUrl: string
 ): string {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   
@@ -48,7 +65,7 @@ export function buildAuthorizationUrl(
 
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: CALLBACK_URL,
+    redirect_uri: callbackUrl,
     response_type: 'code',
     scope: 'openid email profile',
     state,
@@ -67,7 +84,8 @@ export function buildAuthorizationUrl(
  */
 export async function exchangeCodeForTokens(
   code: string,
-  codeVerifier: string
+  codeVerifier: string,
+  callbackUrl: string
 ): Promise<{ idToken: string; accessToken: string }> {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -80,7 +98,7 @@ export async function exchangeCodeForTokens(
     code,
     client_id: clientId,
     client_secret: clientSecret,
-    redirect_uri: CALLBACK_URL,
+    redirect_uri: callbackUrl,
     grant_type: 'authorization_code',
     code_verifier: codeVerifier,
   });

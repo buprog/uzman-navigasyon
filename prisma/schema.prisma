@@ -14,6 +14,7 @@ model User {
   name           String
   companyName    String?
   plan           String   @default("basic") // basic | premium
+  premiumExpiresAt DateTime? // premium subscription expiry (null = no premium or never expires)
   authProvider   String   @default("credentials") // credentials | google (future)
   googleSub      String?  @unique // future Google subject id
   gender         String   @default("UNSPECIFIED") // MALE | FEMALE | UNSPECIFIED
@@ -106,6 +107,7 @@ model DeviceIdentity {
   campaignStartedAt  DateTime? // 15-day campaign window start (DEPRECATED - use EmailIdentity)
   campaignUsed       Boolean  @default(false) // DEPRECATED - use EmailIdentity
   premiumExpiresAt   DateTime? // premium subscription expiry (DEPRECATED - use EmailIdentity)
+  trialCompletedAt   DateTime? // first-trip trial completion timestamp
   linkedUserIds      String[] // users signed up from this device
   lastSeenAt         DateTime @default(now())
   createdAt          DateTime @default(now())

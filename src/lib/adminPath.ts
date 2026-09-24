@@ -61,7 +61,7 @@ export function isAdminRequest(pathname: string): boolean {
  * Check if a request pathname is for the internal admin route
  */
 export function isInternalAdminPath(pathname: string): boolean {
-  return pathname === '/__console' || pathname.startsWith('/__console/');
+  return pathname === '/xconsole-internal' || pathname.startsWith('/xconsole-internal/');
 }
 
 /**
@@ -72,11 +72,11 @@ export function rewriteAdminPath(pathname: string): string {
   if (!path) return pathname;
   
   if (pathname === `/${path}`) {
-    return '/__console';
+    return '/xconsole-internal';
   }
   
   if (pathname.startsWith(`/${path}/`)) {
-    return pathname.replace(`/${path}`, '/__console');
+    return pathname.replace(`/${path}`, '/xconsole-internal');
   }
   
   return pathname;

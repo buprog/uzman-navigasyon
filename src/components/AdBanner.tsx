@@ -34,6 +34,25 @@ export function AdBanner({ hideOnPages = [] }: Props) {
   // Check if banner should be hidden on current page
   const shouldHide = hideOnPages.some(page => pathname.startsWith(page));
 
+  // Add padding to main when banner is visible
+  useEffect(() => {
+    if (!loading && ads.length > 0 && !shouldHide) {
+      // Banner is visible, add padding
+      const main = document.querySelector('main');
+      if (main) {
+        main.style.paddingBottom = '96px'; // Banner height
+      }
+    }
+    
+    return () => {
+      // Cleanup: remove padding when component unmounts
+      const main = document.querySelector('main');
+      if (main) {
+        main.style.paddingBottom = '';
+      }
+    };
+  }, [loading, ads.length, shouldHide]);
+
   useEffect(() => {
     async function fetchAds() {
       try {

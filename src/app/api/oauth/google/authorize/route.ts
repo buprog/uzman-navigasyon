@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { generatePKCE, generateRandomString, buildAuthorizationUrl, isGoogleOAuthConfigured } from '@/lib/googleOAuth';
+import { generatePKCE, generateRandomString, buildAuthorizationUrl, isGoogleOAuthConfigured, getCallbackUrl } from '@/lib/googleOAuth';
 import { storeOAuthState } from '@/lib/oauthState';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     if (!isGoogleOAuthConfigured()) {
       return NextResponse.json(
@@ -19,8 +19,9 @@ export async function POST() {
     // Store in cookies
     storeOAuthState({ state, nonce, codeVerifier });
 
-    // Build authorization URL
-    const authorizationUrl = buildAuthorizationUrl(state, codeChallenge, nonce);
+    // Build authorization URL with callback from request
+    const callbackUrl = getCallbackUrl(request);
+    const authorizationUrl = buildAuthorizationUrl(state, codeChallenge, nonce, callbackUrl);
 
     return NextResponse.json({ authorizationUrl });
   } catch (error) {

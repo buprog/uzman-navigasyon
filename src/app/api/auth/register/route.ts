@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma, isDatabaseNotReadyError } from "@/lib/prisma";
-import { createSession, hashPassword } from "@/lib/auth";
+import { createSession, hashPassword, getSessionUser } from "@/lib/auth";
 import { normalizeEmail } from "@/lib/email";
+
+const DEMO_EMAIL = "operator@demo.com";
 
 export async function POST(req: Request) {
   try {
@@ -65,6 +67,16 @@ export async function POST(req: Request) {
             push: user.id,
           },
         },
+      });
+    }
+
+    // Transfer tours from demo user if registering from demo session
+    const previousUser = await getSessionUser();
+    if (previousUser && previousUser.email === DEMO_EMAIL) {
+      // Transfer all demo user's tours to the new user
+      await prisma.tour.updateMany({
+        where: { userId: previousUser.id },
+        data: { userId: user.id },
       });
     }
 

@@ -58,6 +58,7 @@ export async function getSessionUser() {
       name: true, 
       companyName: true, 
       plan: true,
+      premiumExpiresAt: true,
       gender: true,
       themePreference: true,
       brightness: true,

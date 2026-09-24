@@ -3,7 +3,8 @@ import {
   exchangeCodeForTokens, 
   verifyIdToken, 
   isEmailAllowed,
-  isGoogleSubAllowed 
+  isGoogleSubAllowed,
+  getCallbackUrl
 } from '@/lib/googleOAuth';
 import { getOAuthState, clearOAuthState } from '@/lib/oauthState';
 import { createAdminSession } from '@/lib/adminAuth';
@@ -75,7 +76,8 @@ export async function GET(request: NextRequest) {
     clearOAuthState();
 
     // Exchange code for tokens
-    const { idToken } = await exchangeCodeForTokens(code, oauthState.codeVerifier);
+    const callbackUrl = getCallbackUrl(request);
+    const { idToken } = await exchangeCodeForTokens(code, oauthState.codeVerifier, callbackUrl);
 
     // Verify ID token
     const claims = await verifyIdToken(idToken, oauthState.nonce);

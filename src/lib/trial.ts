@@ -54,6 +54,19 @@ export function completeTrialWithoutPayment() {
   } catch {}
 }
 
+/**
+ * Complete trial server-side (persists across page reloads)
+ */
+export async function completeTrialServerSide() {
+  try {
+    await fetch("/api/trial/complete", {
+      method: "POST",
+    });
+  } catch (err) {
+    console.error("Failed to complete trial server-side:", err);
+  }
+}
+
 export function resetTrial() {
   if (typeof window === "undefined") return;
   try {

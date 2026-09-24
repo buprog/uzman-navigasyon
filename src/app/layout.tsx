@@ -140,8 +140,8 @@ export default async function RootLayout({
         <DayNightDetector />
         <Nav />
         <InstallPrompt />
-        <main className="min-h-[calc(100vh-57px)] pb-24">{children}</main>
-        <AdBanner hideOnPages={["/navigasyon", "/__console"]} />
+        <main className="min-h-[calc(100vh-57px)]">{children}</main>
+        <AdBanner hideOnPages={["/navigasyon", "/planlayici", "/xconsole-internal"]} />
       </body>
     </html>
   );
