@@ -222,7 +222,7 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
                 onClick={handleSkip}
                 className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 transition"
               >
-                Şimdi değil (Premium özellikleri kilitle)
+                Şimdi değil
               </button>
             </div>
           </div>
@@ -311,7 +311,7 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
               onClick={handleSkip}
               className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 transition"
             >
-              Vazgeç (Premium özellikleri kilitle)
+              Vazgeç
             </button>
           </div>
         )}
