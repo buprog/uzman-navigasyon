@@ -8,6 +8,7 @@ type Props = {
   children: ReactNode;
   defaultSnap?: SnapPoint;
   onSnapChange?: (snap: SnapPoint) => void;
+  fullScreen?: boolean;
 };
 
 const SNAP_CONFIG = {
@@ -16,10 +17,11 @@ const SNAP_CONFIG = {
   expanded: "90vh",
 };
 
-export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange }: Props) {
+export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange, fullScreen = false }: Props) {
   const [snap, setSnap] = useState<SnapPoint>(defaultSnap);
   const [isDragging, setIsDragging] = useState(false);
   const [translateY, setTranslateY] = useState(0);
+  const [savedSnap, setSavedSnap] = useState<SnapPoint>(defaultSnap);
   const containerRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -30,10 +32,11 @@ export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange 
   const updateSnapHeights = () => {
     if (!containerRef.current) return;
     const vh = window.innerHeight;
+    const toolbarHeight = 56;
     snapHeightsRef.current = {
       collapsed: 120,
       half: vh * 0.5,
-      expanded: vh * 0.9,
+      expanded: Math.min(vh * 0.9, vh - toolbarHeight - 20),
     };
   };
 
@@ -62,7 +65,19 @@ export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (fullScreen) {
+      setSavedSnap(snap);
+      const vh = window.innerHeight;
+      setTranslateY(vh);
+    } else if (savedSnap) {
+      snapTo(savedSnap);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullScreen]);
+
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (fullScreen) return;
     if (!handleRef.current?.contains(e.target as Node)) return;
     e.preventDefault();
     setIsDragging(true);
@@ -99,6 +114,7 @@ export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange 
   };
 
   const cycleSnap = () => {
+    if (fullScreen) return;
     const order: SnapPoint[] = ["collapsed", "half", "expanded"];
     const idx = order.indexOf(snap);
     const next = order[(idx + 1) % order.length];

@@ -566,9 +566,24 @@ export default function PlanlayiciPage() {
     </>
   );
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (fullScreenMap) {
+        document.body.classList.add('planner-fullscreen-mobile');
+      } else {
+        document.body.classList.remove('planner-fullscreen-mobile');
+      }
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        document.body.classList.remove('planner-fullscreen-mobile');
+      }
+    };
+  }, [fullScreenMap]);
+
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col lg:flex-row">
-      {/* Top toolbar - hide on mobile when fullScreenMap */}
+    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+      {/* Mobile toolbar - hide when fullScreenMap */}
       <div className={`lg:hidden transition-transform duration-300 ${fullScreenMap ? "-translate-y-full absolute inset-x-0 top-0 z-20" : "relative z-10"}`}>
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 text-sm">
           <Link href="/turlar" className="text-slate-500 hover:text-teal-800 shrink-0">
@@ -602,6 +617,13 @@ export default function PlanlayiciPage() {
           >
             🧭 <span className="hidden sm:inline">Navigasyonu Başlat</span>
           </Link>
+          <a
+            href="tel:112"
+            className="btn-secondary !py-1.5 !bg-red-600 !text-white hover:!bg-red-700 shrink-0"
+            title="Acil Durum"
+          >
+            <span className="hidden sm:inline">Acil:</span> 112
+          </a>
           <button className="btn-secondary !py-1.5 hidden sm:inline-block shrink-0" onClick={() => window.print()}>
             Yazdır
           </button>
@@ -671,7 +693,7 @@ export default function PlanlayiciPage() {
         {msg && <span className="text-xs text-teal-700">{msg}</span>}
       </div>
 
-      {/* Main content */}
+      {/* Main content - fixed structure for desktop */}
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row relative">
         {/* Desktop: side panel */}
         <aside className="hidden lg:flex w-80 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white print:w-full print:flex">
@@ -680,12 +702,12 @@ export default function PlanlayiciPage() {
 
         {/* Mobile: Bottom sheet */}
         <div className="lg:hidden">
-          <BottomSheet>
+          <BottomSheet fullScreen={fullScreenMap}>
             {planPanelContent}
           </BottomSheet>
         </div>
 
-        {/* Map - full viewport on mobile */}
+        {/* Map - full viewport on mobile, flex-1 on desktop */}
         <div className="absolute inset-0 lg:relative lg:flex-1 print:hidden">
           <MapView
             stops={tour ? [...tour.stops]
@@ -703,7 +725,11 @@ export default function PlanlayiciPage() {
         {fullScreenMap && (
           <a
             href="tel:112"
-            className="fixed top-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-red-600 text-white shadow-lg hover:bg-red-700 transition lg:hidden"
+            className="fixed z-40 flex h-12 w-12 items-center justify-center rounded-full bg-red-600 text-white shadow-lg hover:bg-red-700 transition lg:hidden"
+            style={{ 
+              top: 'max(1rem, env(safe-area-inset-top))',
+              right: 'max(1rem, env(safe-area-inset-right))'
+            }}
             title="Acil Durum"
           >
             112

@@ -196,13 +196,18 @@ export function MapView({
     });
     
     if (showAttribution) {
-      map.addControl(
-        new maplibregl.AttributionControl({
-          compact: true,
-          customAttribution: "Rota: OSRM (yoksa kuş bakışı)",
-        }),
-        "bottom-left"
-      );
+      const attributionControl = new maplibregl.AttributionControl({
+        compact: true,
+        customAttribution: "Rota: OSRM (yoksa kuş bakışı)",
+      });
+      map.addControl(attributionControl, "bottom-left");
+      
+      setTimeout(() => {
+        const attrElement = map.getContainer().querySelector('.maplibregl-ctrl-attrib');
+        if (attrElement) {
+          attrElement.classList.remove('maplibregl-compact-show');
+        }
+      }, 100);
     }
     
     map.addControl(new maplibregl.NavigationControl(), "top-right");
