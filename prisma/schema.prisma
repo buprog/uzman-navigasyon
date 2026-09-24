@@ -16,6 +16,10 @@ model User {
   plan           String   @default("basic") // basic | premium
   authProvider   String   @default("credentials") // credentials | google (future)
   googleSub      String?  @unique // future Google subject id
+  // KVKK compliance
+  consentGiven      Boolean  @default(false)
+  consentTimestamp  DateTime?
+  consentTextVersion String? // Track which version of consent text was agreed to
   // Araç / sürücü profili (v1 stub — KAPSAM §13)
   vehicleMake       String?
   vehicleModel      String?
@@ -130,4 +134,31 @@ model EmailVerificationCode {
 
   @@index([email, code])
   @@index([expiresAt])
+}
+
+model AdminAccessLog {
+  id          String   @id @default(cuid())
+  adminEmail  String   // who accessed
+  ipTruncated String   // IP with last octet removed (e.g. "192.168.1.x")
+  action      String   // what was done (viewed_dashboard, deleted_user_data, etc.)
+  targetId    String?  // ID of affected record (userId, deviceId, emailIdentity)
+  details     String?  // additional context
+  createdAt   DateTime @default(now())
+
+  @@index([adminEmail])
+  @@index([createdAt])
+}
+
+model PaymentRecord {
+  id                String   @id @default(cuid())
+  emailNormalized   String   // linked to EmailIdentity
+  deviceId          String?  // linked to DeviceIdentity
+  amount            Float    // amount paid (360 or 600)
+  currency          String   @default("TRY")
+  wasTest           Boolean  @default(true) // test payment or real
+  wasCampaign       Boolean  // whether campaign price was used
+  createdAt         DateTime @default(now())
+
+  @@index([emailNormalized])
+  @@index([deviceId])
 }
