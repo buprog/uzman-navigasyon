@@ -22,6 +22,7 @@ export default function KVKKPage() {
             <li><strong>E-posta adresi</strong>: Hesap oluşturma, doğrulama ve iletişim</li>
             <li><strong>Ad-soyad</strong>: Hesap kimliği</li>
             <li><strong>Şirket adı</strong> (opsiyonel): İşletme kullanıcıları için</li>
+            <li><strong>Cinsiyet</strong> (opsiyonel): Abonelik ve hizmet kişiselleştirme amacıyla işlenebilir</li>
             <li><strong>Anonim cihaz kimliği</strong>: İlk yolculuk deneme süresi takibi (localStorage + cookie)</li>
             <li><strong>Tarayıcı parmak izi özeti (hash)</strong>: Yedek cihaz tanıma (sadece özet saklanır, ham sinyal yok)</li>
             <li><strong>Abonelik/ödeme kayıtları</strong>: Premium durum, kampanya kullanımı, ödeme tarihi ve tutarı (test ödemesi)</li>
@@ -36,6 +37,7 @@ export default function KVKKPage() {
           <ul className="list-disc pl-6 text-slate-700">
             <li>Kullanıcı hesabı oluşturma ve kimlik doğrulama</li>
             <li>Premium abonelik yönetimi ve ödeme işleme</li>
+            <li>Hizmet kişiselleştirme (cinsiyet bilgisi belirtildiyse)</li>
             <li>İlk yolculuk deneme süresi takibi (cihaz bazlı, anonim)</li>
             <li>Kampanya uygunluğu kontrolü (e-posta bazlı, 15 günlük pencere)</li>
             <li>Müşteri destek ve iletişim</li>
@@ -82,7 +84,7 @@ export default function KVKKPage() {
           </p>
           <ul className="list-disc pl-6 text-slate-700">
             <li>Sağ üst köşedeki profil menüsünden <strong>"Hesabımı ve verilerimi sil"</strong> seçeneğini kullanabilirsiniz</li>
-            <li>Silme işlemi sonrası: E-posta, ad-soyad, şirket adı ve oturumlarınız kalıcı olarak silinir</li>
+            <li>Silme işlemi sonrası: E-posta, ad-soyad, şirket adı, cinsiyet ve oturumlarınız kalıcı olarak silinir</li>
             <li>Abonelik/ödeme kayıtları anonimleştirilir (kimlik bilgileri geri döndürülemez hash ile değiştirilir)</li>
             <li>Anonim cihaz kimliği tarayıcınızın localStorage'ında kalır (tarayıcı verileri temizleyerek silebilirsiniz)</li>
           </ul>
@@ -116,7 +118,7 @@ export default function KVKKPage() {
         <section className="mb-8">
           <p className="text-sm text-slate-500">
             <strong>Son güncelleme</strong>: 24 Eylül 2026<br />
-            <strong>Metin versiyonu</strong>: v1.0
+            <strong>Metin versiyonu</strong>: v1.1
           </p>
         </section>
       </div>

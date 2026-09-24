@@ -24,6 +24,7 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
   const [campaignDaysLeft, setCampaignDaysLeft] = useState(0);
   const [verificationCode, setVerificationCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
   
   useEffect(() => {
     async function checkDevice() {
@@ -60,6 +61,8 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
     if (authMode === "signup") {
       body.name = fd.get("name");
       body.companyName = fd.get("companyName");
+      body.gender = fd.get("gender");
+      body.consentGiven = consentGiven;
     }
     
     const res = await fetch(endpoint, {
@@ -289,25 +292,55 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
                 />
               </div>
               {authMode === "signup" && (
-                <div>
-                  <label className="label">Şirket adı (opsiyonel)</label>
-                  <input name="companyName" className="input" />
-                </div>
+                <>
+                  <div>
+                    <label className="label">Şirket adı (opsiyonel)</label>
+                    <input name="companyName" className="input" />
+                  </div>
+                  <div>
+                    <label className="label">Cinsiyet</label>
+                    <select name="gender" defaultValue="UNSPECIFIED" className="input">
+                      <option value="UNSPECIFIED">Belirtmek istemiyorum</option>
+                      <option value="MALE">Erkek</option>
+                      <option value="FEMALE">Kadın</option>
+                    </select>
+                  </div>
+                </>
               )}
               {error && <p className="text-sm text-red-600">{error}</p>}
               
               {authMode === "signup" && (
-                <div className="rounded-lg bg-slate-50 border border-slate-200 p-2">
-                  <p className="text-[10px] text-slate-600">
-                    🔒 Kampanya ve abonelik hakkını korumak için cihazınıza özel anonim bir tanımlayıcı kullanıyoruz.{" "}
-                    <a href="/privacy" className="text-teal-700 underline">
-                      Gizlilik
-                    </a>
-                  </p>
-                </div>
+                <>
+                  <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={consentGiven}
+                        onChange={(e) => setConsentGiven(e.target.checked)}
+                        required
+                        className="mt-0.5 w-4 h-4 text-teal-700 rounded focus:ring-teal-500"
+                      />
+                      <span className="text-[11px] text-slate-700">
+                        Cihaz kimliğim, e-posta adresim ve (belirttiysem) cinsiyet bilgimin abonelik yönetimi ve hizmet kişiselleştirme amacıyla işlenmesine açık rıza veriyorum.{" "}
+                        <a href="/kvkk" target="_blank" className="text-teal-700 underline font-semibold">
+                          KVKK Aydınlatma Metni
+                        </a>
+                      </span>
+                    </label>
+                  </div>
+                  
+                  <div className="rounded-lg bg-slate-50 border border-slate-200 p-2">
+                    <p className="text-[10px] text-slate-600">
+                      🔒 Kampanya ve abonelik hakkını korumak için cihazınıza özel anonim bir tanımlayıcı kullanıyoruz.{" "}
+                      <a href="/privacy" className="text-teal-700 underline">
+                        Gizlilik
+                      </a>
+                    </p>
+                  </div>
+                </>
               )}
               
-              <button type="submit" disabled={loading} className="btn-primary w-full">
+              <button type="submit" disabled={loading || (authMode === "signup" && !consentGiven)} className="btn-primary w-full">
                 {loading
                   ? "İşleniyor…"
                   : (authMode === "signup" ? "Hesap oluştur ve devam et →" : "Giriş yap ve devam et →")}

@@ -11,6 +11,8 @@ export async function POST(req: Request) {
     const password = String(body.password || "");
     const name = String(body.name || "").trim();
     const companyName = body.companyName ? String(body.companyName).trim() : null;
+    const gender = String(body.gender || "UNSPECIFIED");
+    const consentGiven = body.consentGiven === true;
     const verified = body.verified === true; // Email verification status
 
     if (!email || !password || !name || password.length < 6) {
@@ -44,9 +46,13 @@ export async function POST(req: Request) {
         email,
         name,
         companyName,
+        gender,
         plan: initialPlan,
         authProvider: "credentials",
         passwordHash: await hashPassword(password),
+        consentGiven,
+        consentTimestamp: consentGiven ? new Date() : null,
+        consentTextVersion: consentGiven ? "v1.1" : null,
       },
     });
 
