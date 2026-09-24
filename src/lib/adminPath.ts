@@ -3,7 +3,7 @@
  * The admin panel is served under a secret path from ADMIN_PATH env var
  */
 
-const ADMIN_PATH_REGEX = /^[a-z0-9-]{12,64}$/;
+const ADMIN_PATH_REGEX = /^[a-z0-9-]{10,64}$/;
 
 /**
  * Get and validate the admin path from environment
@@ -17,7 +17,7 @@ export function getAdminPath(): string | null {
   }
   
   if (!ADMIN_PATH_REGEX.test(path)) {
-    console.error('ADMIN_PATH is invalid. Must match ^[a-z0-9-]{12,64}$');
+    console.error('ADMIN_PATH is invalid. Must match ^[a-z0-9-]{10,64}$');
     return null;
   }
   
@@ -36,7 +36,7 @@ export function isAdminEnabled(): boolean {
  */
 export function getAdminLoginUrl(): string | null {
   const path = getAdminPath();
-  return path ? `/${path}/giris` : null;
+  return path ? `/${path}/signin` : null;
 }
 
 /**
@@ -61,7 +61,7 @@ export function isAdminRequest(pathname: string): boolean {
  * Check if a request pathname is for the internal admin route
  */
 export function isInternalAdminPath(pathname: string): boolean {
-  return pathname === '/__a' || pathname.startsWith('/__a/');
+  return pathname === '/__console' || pathname.startsWith('/__console/');
 }
 
 /**
@@ -72,11 +72,11 @@ export function rewriteAdminPath(pathname: string): string {
   if (!path) return pathname;
   
   if (pathname === `/${path}`) {
-    return '/__a';
+    return '/__console';
   }
   
   if (pathname.startsWith(`/${path}/`)) {
-    return pathname.replace(`/${path}`, '/__a');
+    return pathname.replace(`/${path}`, '/__console');
   }
   
   return pathname;

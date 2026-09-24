@@ -6,26 +6,32 @@ The admin panel has been significantly hardened with multiple layers of security
 ## Security Layers
 
 ### Layer 1: Secret Path (Obscurity)
-The admin panel is no longer accessible at predictable URLs like `/yonetim`. Instead, it is served under a secret path defined by the `ADMIN_PATH` environment variable.
+The admin panel is not accessible at any predictable or guessable URLs. Instead, it is served under a secret path defined by the `ADMIN_PATH` environment variable.
 
 **Configuration:**
 - **Environment Variable**: `ADMIN_PATH`
-- **Format**: Must match `^[a-z0-9-]{12,64}$` (12-64 characters, lowercase letters, numbers, and hyphens)
-- **Example**: `kapi-7f3a9x2b8c4d1e5f6g7h`
+- **Format**: Must match `^[a-z0-9-]{10,64}$` (10-64 characters, lowercase letters, numbers, and hyphens)
+- **Style**: English-looking meaningless slug (e.g., `vault-xxxx` format)
+- **Example**: `vault-7f3a9x2b8c4d1e5f6g7h`
 - **Validation**: Invalid or missing values result in the admin panel being completely disabled (404)
 
 **Implementation:**
-- Physical routes stored in `src/app/__a/` (internal directory)
-- Middleware rewrites `/${ADMIN_PATH}` → `/__a` and `/${ADMIN_PATH}/giris` → `/__a/giris`
-- Direct access to `/__a/*` returns 404 (only rewritten requests are allowed)
+- Physical routes stored in `src/app/__console/` (internal directory with neutral naming)
+- Middleware rewrites `/${ADMIN_PATH}` → `/__console` and `/${ADMIN_PATH}/signin` → `/__console/signin`
+- Direct access to `/__console/*` returns 404 (only rewritten requests are allowed)
 - All admin links and redirects are built dynamically from the environment variable
+- Admin cookie named `c_sess` (neutral, non-identifying)
 - Admin cookie scoped to the secret path (e.g., `path=/${ADMIN_PATH}`)
+- Browser tab title: "Console" (generic, non-identifying)
+- No Turkish words in URLs, paths, cookie names, or API routes
+- UI text inside panel remains Turkish for authorized users
 
 **Security Benefits:**
 - Admin panel URL not discoverable through directory scanning
 - No hints or redirects from public URLs
+- No language-specific clues (Turkish words removed from technical identifiers)
 - Path not hardcoded anywhere in the codebase (can be changed without code changes)
-- Attempting to access `/yonetim` returns a plain 404 (identical to any unknown page)
+- Attempting to access any predictable admin URL returns a plain 404 (identical to any unknown page)
 
 ### Layer 2: HTTP Basic Authentication
 Every request to the admin panel (including the login page) requires HTTP Basic Authentication credentials.
@@ -115,7 +121,7 @@ Comprehensive HTTP security headers applied to all admin responses.
 ## Environment Variables
 
 **Required (for admin access):**
-- `ADMIN_PATH` - Secret path (12-64 chars, `^[a-z0-9-]{12,64}$`)
+- `ADMIN_PATH` - Secret path (10-64 chars, `^[a-z0-9-]{10,64}$`, English-looking format like `vault-xxxx`)
 - `ADMIN_BASIC_USER` - HTTP Basic Auth username
 - `ADMIN_BASIC_PASSWORD` - HTTP Basic Auth password
 - `ADMIN_EMAIL` - Admin login email
@@ -127,7 +133,7 @@ Comprehensive HTTP security headers applied to all admin responses.
 **Example `.env` configuration:**
 ```bash
 # Admin panel - all fields required except IP allowlist
-ADMIN_PATH="kapi-7f3a9x2b8c4d1e5f6g7h"
+ADMIN_PATH="vault-7f3a9x2b8c4d1e5f6g7h"
 ADMIN_BASIC_USER="admin"
 ADMIN_BASIC_PASSWORD="strong-basic-password-here"
 ADMIN_EMAIL="admin@example.com"
@@ -140,26 +146,27 @@ ADMIN_PASSWORD="strong-admin-password-here"
 **New Files:**
 - `src/lib/adminPath.ts` - Admin path utilities and validation
 - `src/middleware.ts` - Security middleware (Basic Auth, IP allowlist, rewrites, headers)
-- `src/app/__a/page.tsx` - Internal admin dashboard route
-- `src/app/__a/giris/page.tsx` - Internal admin login route
+- `src/app/__console/page.tsx` - Internal admin dashboard route (neutral naming)
+- `src/app/__console/signin/page.tsx` - Internal admin login route
 
 **Modified Files:**
-- `src/lib/adminAuth.ts` - Updated cookie scoping to secret path
-- `src/components/admin/AdminDashboard.tsx` - Dynamic logout redirect
-- `src/app/layout.tsx` - Updated AdBanner hideOnPages to internal path
-- `.env.example` - Updated admin panel configuration documentation
+- `src/lib/adminAuth.ts` - Updated cookie name to `c_sess` and scoping to secret path
+- `src/components/admin/AdminDashboard.tsx` - Dynamic logout redirect to `/signin`
+- `src/app/layout.tsx` - Updated AdBanner hideOnPages to `/__console`
+- `.env.example` - Updated admin panel configuration (10-64 chars, English-looking slug)
 
 **Removed Files:**
-- `src/app/yonetim/page.tsx` - Old public admin route (removed)
-- `src/app/yonetim/giris/page.tsx` - Old public login route (removed)
+- `src/app/yonetim/` - Old public admin routes (removed entirely)
 
 ## Verification Steps
 
 ### 1. Verify Old Public URLs Return 404
-**Test**: Access old admin URLs
+**Test**: Access any predictable admin URLs
 ```bash
 curl -I https://your-domain.com/yonetim
 curl -I https://your-domain.com/yonetim/giris
+curl -I https://your-domain.com/admin
+curl -I https://your-domain.com/console
 ```
 **Expected**: `404 Not Found` (plain 404, identical to any unknown page)
 **Verify**: No hints, no redirects, no special error messages
@@ -167,8 +174,8 @@ curl -I https://your-domain.com/yonetim/giris
 ### 2. Verify Secret Path Without Basic Auth Returns 401
 **Test**: Access secret path without credentials
 ```bash
-# Replace 'kapi-...' with your actual ADMIN_PATH
-curl -I https://your-domain.com/kapi-7f3a9x2b8c4d1e5f6g7h
+# Replace 'vault-...' with your actual ADMIN_PATH
+curl -I https://your-domain.com/vault-7f3a9x2b8c4d1e5f6g7h
 ```
 **Expected**: 
 ```
@@ -181,16 +188,16 @@ WWW-Authenticate: Basic realm="Restricted"
 **Test**: Access with Basic Auth credentials
 ```bash
 # Replace with your ADMIN_BASIC_USER and ADMIN_BASIC_PASSWORD
-curl -u admin:basic-password https://your-domain.com/kapi-7f3a9x2b8c4d1e5f6g7h/giris
+curl -u admin:basic-password https://your-domain.com/vault-7f3a9x2b8c4d1e5f6g7h/signin
 ```
-**Expected**: `200 OK` with login form HTML
-**Verify**: Login form loads successfully
+**Expected**: `200 OK` with login form HTML and `<title>Console</title>`
+**Verify**: Login form loads successfully with generic "Console" title
 
 ### 4. Verify Direct Access to Internal Path Returns 404
 **Test**: Try to access internal route directly
 ```bash
-curl -I https://your-domain.com/__a
-curl -I https://your-domain.com/__a/giris
+curl -I https://your-domain.com/__console
+curl -I https://your-domain.com/__console/signin
 ```
 **Expected**: `404 Not Found`
 **Verify**: Internal path is not directly accessible
@@ -199,7 +206,7 @@ curl -I https://your-domain.com/__a/giris
 **Test**: Access from non-allowed IP
 ```bash
 # From an IP not in ADMIN_IP_ALLOWLIST
-curl -u admin:basic-password https://your-domain.com/kapi-7f3a9x2b8c4d1e5f6g7h
+curl -u admin:basic-password https://your-domain.com/vault-7f3a9x2b8c4d1e5f6g7h
 ```
 **Expected**: `404 Not Found` (if IP allowlist is configured)
 **Verify**: Only allowed IPs can access
@@ -215,8 +222,8 @@ curl -I https://your-domain.com/api/admin/ads
 ### 7. Verify Rate Limiting
 **Test**: Make multiple failed Basic Auth attempts
 ```bash
-# Try 6+ times with wrong credentials
-for i in {1..6}; do curl -u wrong:wrong https://your-domain.com/kapi-...; done
+# Try 6+ times with wrong credentials (replace with your ADMIN_PATH)
+for i in {1..6}; do curl -u wrong:wrong https://your-domain.com/vault-...; done
 ```
 **Expected**: After 5 failures, `429 Too Many Requests` with `Retry-After: 900`
 **Verify**: Rate limiting prevents brute force
@@ -224,7 +231,7 @@ for i in {1..6}; do curl -u wrong:wrong https://your-domain.com/kapi-...; done
 ### 8. Verify Security Headers
 **Test**: Check response headers
 ```bash
-curl -u admin:basic-password -I https://your-domain.com/kapi-7f3a9x2b8c4d1e5f6g7h
+curl -u admin:basic-password -I https://your-domain.com/vault-7f3a9x2b8c4d1e5f6g7h
 ```
 **Expected headers:**
 ```
@@ -238,15 +245,17 @@ Referrer-Policy: no-referrer
 
 ### 9. Verify Login Flow
 **Test**: Complete full authentication flow
-1. Navigate to `https://your-domain.com/[ADMIN_PATH]/giris`
+1. Navigate to `https://your-domain.com/[ADMIN_PATH]/signin`
 2. Browser prompts for Basic Auth → Enter `ADMIN_BASIC_USER` and `ADMIN_BASIC_PASSWORD`
-3. Login form appears → Enter `ADMIN_EMAIL` and `ADMIN_PASSWORD`
+3. Login form appears with title "Console" → Enter `ADMIN_EMAIL` and `ADMIN_PASSWORD`
 4. Redirects to dashboard at `https://your-domain.com/[ADMIN_PATH]`
 
 **Verify**: 
 - Both authentication layers work
-- Dashboard loads with ads and settings tabs
-- Logout redirects to login page with `/giris` suffix
+- Browser tab shows generic "Console" title
+- Dashboard loads with ads and settings tabs (Turkish UI text)
+- Logout redirects to login page with `/signin` suffix
+- Cookie named `c_sess` scoped to secret path
 
 ### 10. Verify Admin Panel Not Linked from Public UI
 **Test**: Inspect public pages
@@ -281,13 +290,16 @@ Referrer-Policy: no-referrer
 
 **Before:**
 - Admin panel at predictable URL (`/yonetim`)
+- Language-specific clues (Turkish words in URLs)
 - Single authentication layer (email/password)
 - No IP restrictions
 - Minimal security headers
 - Vulnerable to automated scanning
 
 **After:**
-- Admin panel at unpredictable secret URL (entropy: ~60-260 bits for 12-64 char path)
+- Admin panel at unpredictable secret URL (entropy: ~50-260 bits for 10-64 char path)
+- English-looking meaningless slugs (no language clues)
+- Neutral technical identifiers (cookie: `c_sess`, path: `__console`, title: "Console")
 - Three authentication layers (Basic Auth → Login → Session)
 - Optional IP allowlist
 - Comprehensive security headers
@@ -296,13 +308,19 @@ Referrer-Policy: no-referrer
 - No search engine indexing
 - No iframe embedding
 - No referrer leakage
+- No predictable admin URLs return anything but 404
 
 ## Best Practices
 
 1. **Generate Strong Secret Path:**
    ```bash
-   openssl rand -hex 16 | tr '[:upper:]' '[:lower:]' | sed 's/\(..\)/\1-/g; s/-$//'
-   # Example output: 7f3a9x2b8c4d1e5f6g7h8i9j0k1l2m3n
+   # Generate a random hex string and format as English-looking slug
+   echo "vault-$(openssl rand -hex 12 | tr '[:upper:]' '[:lower:]')"
+   # Example output: vault-7f3a9x2b8c4d1e5f6g7h8i9j0k1l
+   
+   # Or use a different prefix
+   echo "console-$(openssl rand -hex 10)"
+   echo "portal-$(openssl rand -hex 10)"
    ```
 
 2. **Use Different Credentials for Each Layer:**
@@ -351,9 +369,10 @@ Referrer-Policy: no-referrer
 
 **Problem**: Admin panel returns 404 even at secret path
 **Solution**: 
-- Verify `ADMIN_PATH` is set and valid (12-64 chars, `^[a-z0-9-]{12,64}$`)
+- Verify `ADMIN_PATH` is set and valid (10-64 chars, `^[a-z0-9-]{10,64}$`)
 - Check server logs for validation errors
 - Ensure all required env vars are set
+- Try a different path format (e.g., `vault-` prefix followed by random chars)
 
 **Problem**: Basic Auth keeps prompting
 **Solution**:

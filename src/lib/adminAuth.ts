@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "./prisma";
 import { getAdminPath } from "./adminPath";
 
-const ADMIN_COOKIE = "un_admin";
+const ADMIN_COOKIE = "c_sess";
 const SECRET = process.env.AUTH_SECRET || "uzman-navigasyon-dev-secret-change-me";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;

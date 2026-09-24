@@ -3,7 +3,15 @@ import { getAdminSession } from "@/lib/adminAuth";
 import { getAdminLoginUrl } from "@/lib/adminPath";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 
-export default async function InternalAdminPage() {
+export const metadata = {
+  title: "Console",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
+export default async function ConsolePage() {
   const adminEmail = await getAdminSession();
   
   if (!adminEmail) {

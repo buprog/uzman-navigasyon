@@ -16,8 +16,8 @@ export function AdminDashboard({ adminEmail }: Props) {
 
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
-    // Redirect to login page (same path with /giris)
-    router.push(pathname + '/giris');
+    // Redirect to login page (same path with /signin)
+    router.push(pathname + '/signin');
   }
 
   return (
