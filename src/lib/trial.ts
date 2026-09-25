@@ -59,6 +59,12 @@ export function completeTrialWithoutPayment() {
  */
 export async function completeTrialServerSide() {
   try {
+    // Set localStorage immediately
+    if (typeof window !== "undefined") {
+      localStorage.setItem(TRIAL_KEY, "false");
+    }
+    
+    // Also persist to server
     await fetch("/api/trial/complete", {
       method: "POST",
     });

@@ -47,11 +47,25 @@ async function main() {
     },
   });
 
-  // Remove previous sample for idempotent seed
-  await prisma.tour.deleteMany({ where: { userId: user.id, isSample: true } });
-
-  const tour = await prisma.tour.create({
-    data: {
+  // Upsert sample tour by stable ID (idempotent, non-destructive)
+  // Use the existing sample tour ID to preserve it
+  const sampleTourId = "cmug065rz0002116zh16juh3l";
+  
+  const tour = await prisma.tour.upsert({
+    where: { id: sampleTourId },
+    update: {
+      name: "Kapadokya Keşif Turu",
+      description:
+        "3 günlük Kapadokya programı: Göreme, Uçhisar, Derinkuyu ve peri bacaları. Örnek seed turu.",
+      startName: "Nevşehir",
+      endName: "Göreme",
+      startDate: "2026-05-10",
+      endDate: "2026-05-12",
+      dayCount: 3,
+      isSample: true,
+    },
+    create: {
+      id: sampleTourId,
       userId: user.id,
       name: "Kapadokya Keşif Turu",
       description:
@@ -157,14 +171,27 @@ async function main() {
     },
   });
 
-  const departure = await prisma.departure.create({
-    data: {
+  // Upsert sample departure (idempotent, preserve share code)
+  const sampleDepartureId = "sample-departure-kapadokya";
+  const sampleShareCode = "5d5e0rljyk"; // Fixed share code for sample tour
+  
+  const departure = await prisma.departure.upsert({
+    where: { id: sampleDepartureId },
+    update: {
+      date: "2026-05-10",
+      capacity: 16,
+      bookedCount: 0,
+      status: "yayin",
+      note: "Örnek yayınlı kalkış",
+    },
+    create: {
+      id: sampleDepartureId,
       tourId: tour.id,
       date: "2026-05-10",
       capacity: 16,
       bookedCount: 0,
       status: "yayin",
-      shareCode: nanoid(),
+      shareCode: sampleShareCode,
       note: "Örnek yayınlı kalkış",
     },
   });

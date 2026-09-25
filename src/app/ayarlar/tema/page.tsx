@@ -106,15 +106,15 @@ export default function ThemeSettingsPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Görünüm Ayarları</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-2xl font-bold text-slate-900 [html[data-mode='night']_&]:text-slate-100 mb-2">Görünüm Ayarları</h1>
+        <p className="text-sm text-slate-600 [html[data-mode='night']_&]:text-slate-300">
           Uygulamanın tema ve parlaklığını kişiselleştirin
         </p>
       </div>
 
       {/* Brightness Slider */}
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Parlaklık</h2>
+      <div className="bg-white [html[data-mode='night']_&]:bg-slate-800 rounded-xl shadow-sm p-6 mb-6">
+        <h2 className="text-lg font-semibold text-slate-900 [html[data-mode='night']_&]:text-slate-100 mb-4">Parlaklık</h2>
         <div className="space-y-4">
           <div>
             <label htmlFor="brightness-slider" className="block text-sm text-slate-700 mb-2">
@@ -157,8 +157,8 @@ export default function ThemeSettingsPage() {
       </div>
 
       {/* Theme Selector */}
-      <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900 mb-3">Tema</h2>
+      <div className="bg-white [html[data-mode='night']_&]:bg-slate-800 rounded-xl shadow-sm p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-slate-900 [html[data-mode='night']_&]:text-slate-100 mb-3">Tema</h2>
         {themes.map((theme) => (
           <button
             key={theme.value || "auto"}
@@ -166,8 +166,8 @@ export default function ThemeSettingsPage() {
             disabled={loading}
             className={`w-full text-left p-4 rounded-lg border-2 transition ${
               currentTheme === theme.value
-                ? "border-teal-700 bg-teal-50"
-                : "border-slate-200 hover:border-slate-300 bg-white"
+                ? "border-teal-700 bg-teal-50 [html[data-mode='night']_&]:bg-teal-900/30 [html[data-mode='night']_&]:border-teal-500"
+                : "border-slate-200 hover:border-slate-300 bg-white [html[data-mode='night']_&]:bg-slate-700 [html[data-mode='night']_&]:border-slate-600 [html[data-mode='night']_&]:hover:border-slate-500"
             }`}
           >
             <div className="flex items-center gap-3">
@@ -183,8 +183,8 @@ export default function ThemeSettingsPage() {
                 )}
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-slate-900">{theme.label}</p>
-                <p className="text-xs text-slate-600 mt-0.5">{theme.preview}</p>
+                <p className="font-semibold text-slate-900 [html[data-mode='night']_&]:text-slate-100">{theme.label}</p>
+                <p className="text-xs text-slate-600 [html[data-mode='night']_&]:text-slate-300 mt-0.5">{theme.preview}</p>
               </div>
             </div>
           </button>

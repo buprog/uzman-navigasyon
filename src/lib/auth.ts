@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
+import { getEffectivePlan } from "./plan";
 
 const COOKIE = "un_session";
 const SECRET = process.env.AUTH_SECRET || "uzman-navigasyon-dev-secret-change-me";
@@ -70,6 +71,20 @@ export async function requireUser() {
   const user = await getSessionUser();
   if (!user) throw new Error("UNAUTHORIZED");
   return user;
+}
+
+/**
+ * Get session user with effective plan (respecting premium expiration)
+ */
+export async function getSessionUserWithEffectivePlan() {
+  const user = await getSessionUser();
+  if (!user) return null;
+  
+  const effectivePlan = getEffectivePlan(user.plan, user.premiumExpiresAt);
+  return {
+    ...user,
+    plan: effectivePlan,
+  };
 }
 
 export async function ensureDemoUser() {

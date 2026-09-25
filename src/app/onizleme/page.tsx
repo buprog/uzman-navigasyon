@@ -28,8 +28,8 @@ export default function PreviewPage() {
   const currentDevice = dimensions[device];
 
   return (
-    <div className="min-h-screen bg-slate-900 p-6">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen bg-slate-900 p-4 sm:p-6">
+      <div className="mx-auto max-w-7xl overflow-x-hidden">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white mb-2">

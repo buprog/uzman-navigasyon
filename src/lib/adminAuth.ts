@@ -22,22 +22,18 @@ export async function createAdminSession(
 ) {
   const payload = `${email}.${googleSub || 'unknown'}.${Date.now()}`;
   const token = `${payload}.${sign(payload)}`;
-  const adminPath = getAdminPath();
-  const cookiePath = adminPath ? `/${adminPath}` : '/';
   
   cookies().set(ADMIN_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: cookiePath,
+    sameSite: "strict",
+    path: "/",
     maxAge: 60 * 60 * 8, // 8 hours
   });
 }
 
 export async function destroyAdminSession() {
-  const adminPath = getAdminPath();
-  const cookiePath = adminPath ? `/${adminPath}` : '/';
-  cookies().set(ADMIN_COOKIE, "", { httpOnly: true, path: cookiePath, maxAge: 0 });
+  cookies().set(ADMIN_COOKIE, "", { httpOnly: true, path: "/", maxAge: 0 });
 }
 
 export async function getAdminSession(): Promise<string | null> {
@@ -65,9 +61,8 @@ export async function getAdminSession(): Promise<string | null> {
   return email;
 }
 
-export async function requireAdmin(): Promise<string> {
+export async function requireAdmin(): Promise<string | null> {
   const email = await getAdminSession();
-  if (!email) throw new Error("ADMIN_UNAUTHORIZED");
   return email;
 }
 

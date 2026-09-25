@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma, isDatabaseNotReadyError } from "@/lib/prisma";
 import { createSession, hashPassword, getSessionUser } from "@/lib/auth";
 import { normalizeEmail } from "@/lib/email";
 
 const DEMO_EMAIL = "operator@demo.com";
+const DEVICE_ID_COOKIE = "un_did";
 
 export async function POST(req: Request) {
   try {
@@ -16,6 +18,7 @@ export async function POST(req: Request) {
     const gender = String(body.gender || "UNSPECIFIED");
     const consentGiven = body.consentGiven === true;
     const verified = body.verified === true; // Email verification status
+    const currentTourId = body.currentTourId ? String(body.currentTourId) : null;
 
     if (!email || !password || !name || password.length < 6) {
       return NextResponse.json(
@@ -70,14 +73,24 @@ export async function POST(req: Request) {
       });
     }
 
-    // Transfer tours from demo user if registering from demo session
+    // Transfer current tour from demo user if registering from demo session
     const previousUser = await getSessionUser();
-    if (previousUser && previousUser.email === DEMO_EMAIL) {
-      // Transfer all demo user's tours to the new user
-      await prisma.tour.updateMany({
-        where: { userId: previousUser.id },
-        data: { userId: user.id },
+    if (previousUser && previousUser.email === DEMO_EMAIL && currentTourId) {
+      // Only transfer the specific tour if it exists, belongs to demo user, and is NOT a sample
+      const tour = await prisma.tour.findFirst({
+        where: {
+          id: currentTourId,
+          userId: previousUser.id,
+          isSample: false,
+        },
       });
+      
+      if (tour) {
+        await prisma.tour.update({
+          where: { id: tour.id },
+          data: { userId: user.id },
+        });
+      }
     }
 
     await createSession(user.id);

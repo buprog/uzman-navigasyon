@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
-import { limitsFor } from "@/lib/plan";
+import { limitsFor, getEffectivePlan } from "@/lib/plan";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -8,15 +8,14 @@ export async function GET() {
   if (!user) return NextResponse.json({ user: null }, { status: 401 });
   
   // Check and enforce premium expiration
-  if (user.plan === "premium" && user.premiumExpiresAt) {
-    if (new Date() > new Date(user.premiumExpiresAt)) {
-      // Premium expired - downgrade to basic
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { plan: "basic" },
-      });
-      user.plan = "basic";
-    }
+  const effectivePlan = getEffectivePlan(user.plan, user.premiumExpiresAt);
+  if (effectivePlan === "basic" && user.plan === "premium") {
+    // Premium expired - downgrade to basic
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { plan: "basic" },
+    });
+    user.plan = "basic";
   }
   
   return NextResponse.json({ user, limits: limitsFor(user.plan) });

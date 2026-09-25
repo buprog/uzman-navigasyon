@@ -15,7 +15,7 @@ export default async function ConsoleSignInPage() {
 
   if (!isConfigured) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-[calc(100vh-57px)] bg-slate-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-xl shadow-lg p-8">
             <h1 className="text-2xl font-bold text-slate-900 mb-6 text-center">
@@ -31,7 +31,7 @@ export default async function ConsoleSignInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-[calc(100vh-57px)] bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h1 className="text-2xl font-bold text-slate-900 mb-6 text-center">
