@@ -195,3 +195,42 @@ model AdSettings {
   rotationMode     String   @default("sıralı") // sıralı | rastgele
   updatedAt        DateTime @updatedAt
 }
+
+model DiscountCode {
+  id           String   @id @default(cuid())
+  code         String   @unique // uppercase, format PREFIX-XXXXXX
+  type         String   // PREMIUM_DAYS | PERCENT
+  premiumDays  Int?     // default 365 for PREMIUM_DAYS type
+  percent      Int?     // for PERCENT type
+  startsAt     DateTime
+  endsAt       DateTime
+  maxUses      Int      @default(1)
+  usedCount    Int      @default(0)
+  batchName    String?  // toplu satış grubu
+  batchId      String?  // toplu satış grubu ID
+  fullName     String?
+  company      String?
+  phone        String?
+  email        String?
+  note         String?
+  disabled     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  redemptions  DiscountRedemption[]
+
+  @@index([batchId])
+  @@index([endsAt])
+}
+
+model DiscountRedemption {
+  id           String   @id @default(cuid())
+  codeId       String
+  code         DiscountCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  deviceId     String
+  platform     String   // web | android
+  redeemedAt   DateTime @default(now())
+  premiumUntil DateTime?
+
+  @@unique([codeId, deviceId])
+  @@index([deviceId])
+}

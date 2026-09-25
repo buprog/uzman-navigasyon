@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
-import { countTours, LIMIT_MESSAGES, limitsFor, getEffectivePlan } from "@/lib/plan";
+import { countTours, LIMIT_MESSAGES, limitsFor } from "@/lib/plan";
+import { getEffectivePlan } from "@/lib/effectivePlan";
 
 async function ownedTour(id: string, userId: string) {
   return prisma.tour.findFirst({
@@ -27,8 +28,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const body = await req.json();
 
   if (body.action === "duplicate") {
-    const effectivePlan = getEffectivePlan(user.plan, user.premiumExpiresAt);
-    const limits = limitsFor(effectivePlan);
+    const effectivePlanResult = await getEffectivePlan(user.plan, user.premiumExpiresAt);
+    const limits = limitsFor(effectivePlanResult.plan);
     if (existing.isSample && !limits.canCopySample) {
       return NextResponse.json(
         { error: LIMIT_MESSAGES.sampleCopy, code: "PLAN_LIMIT", upgrade: true },
