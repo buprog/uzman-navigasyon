@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { NavigationView } from "@/components/NavigationView";
 import { PaymentModal } from "@/components/PaymentModal";
 import type { MapStop } from "@/components/MapView";
-import { isTrialActive, checkTrialResetParam } from "@/lib/trial";
+import { isTrialActive, checkTrialResetParam, syncTrialStatusFromServer } from "@/lib/trial";
 import { setCurrentTourId } from "@/lib/tourContext";
 
 type Stop = {
@@ -90,7 +90,12 @@ export default function NavigasyonPage() {
     // Check trial reset param
     checkTrialResetParam();
     
-    // Load trial and user state
+    // Sync trial state from server
+    syncTrialStatusFromServer().then(() => {
+      setTrialActive(isTrialActive());
+    });
+    
+    // Load trial state immediately (will be updated if server differs)
     setTrialActive(isTrialActive());
     
     fetch("/api/auth/me")

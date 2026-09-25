@@ -85,13 +85,13 @@ export default function PublicItineraryPage() {
   if (!data) return <div className="p-8 text-slate-500">Yükleniyor…</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-screen bg-slate-50 [html[data-mode='night']_&]:bg-slate-900">
+      <header className="border-b border-slate-200 bg-white [html[data-mode='night']_&]:bg-slate-800 [html[data-mode='night']_&]:border-slate-700">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div>
-            <p className="text-xs uppercase tracking-wide text-teal-700">Uzman Navigasyon</p>
-            <h1 className="text-2xl font-bold">{data.tour.name}</h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-xs uppercase tracking-wide text-teal-700 [html[data-mode='night']_&]:text-teal-400">Uzman Navigasyon</p>
+            <h1 className="text-2xl font-bold text-slate-900 [html[data-mode='night']_&]:text-slate-100">{data.tour.name}</h1>
+            <p className="text-sm text-slate-500 [html[data-mode='night']_&]:text-slate-400">
               {data.operator.name} · Kalkış: {data.departure.date} ·{" "}
               {data.departure.bookedCount}/{data.departure.capacity} dolu
             </p>
@@ -104,7 +104,7 @@ export default function PublicItineraryPage() {
 
       {thanks && (
         <div className="mx-auto max-w-6xl px-4 pt-4">
-          <div className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+          <div className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900 [html[data-mode='night']_&]:bg-teal-900/30 [html[data-mode='night']_&]:border-teal-700 [html[data-mode='night']_&]:text-teal-100">
             {thanks}
           </div>
         </div>
@@ -117,7 +117,7 @@ export default function PublicItineraryPage() {
           )}
           {byDay.map(([day, stops]) => (
             <div key={day} className="card">
-              <h2 className="font-semibold text-teal-800">Gün {day + 1}</h2>
+              <h2 className="font-semibold text-teal-800 [html[data-mode='night']_&]:text-teal-400">Gün {day + 1}</h2>
               <ol className="mt-3 space-y-3">
                 {stops.map((s, i) => (
                   <li key={s.id} className="border-l-2 border-teal-200 pl-3">

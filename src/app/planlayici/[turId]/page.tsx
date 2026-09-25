@@ -17,7 +17,7 @@ import {
   formatDuration,
   mockTireServiceOffers,
 } from "@/lib/driverAssistStubs";
-import { checkTrialResetParam, isTrialActive } from "@/lib/trial";
+import { checkTrialResetParam, isTrialActive, syncTrialStatusFromServer } from "@/lib/trial";
 import { TrialEndNotification } from "@/components/TrialEndNotification";
 import { RouteWeatherStrip, RouteWeatherStripSkeleton } from "@/components/RouteWeatherStrip";
 import { useRouteWeather } from "@/hooks/useRouteWeather";
@@ -129,7 +129,12 @@ export default function PlanlayiciPage() {
     // Check for trial reset param
     checkTrialResetParam();
     
-    // Load trial state
+    // Sync trial state from server
+    syncTrialStatusFromServer().then(() => {
+      setTrialActive(isTrialActive());
+    });
+    
+    // Load trial state immediately (will be updated if server differs)
     setTrialActive(isTrialActive());
     
     fetch("/api/auth/me")

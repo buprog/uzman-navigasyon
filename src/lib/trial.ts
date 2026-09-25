@@ -99,11 +99,42 @@ export function isTrialActive(): boolean {
 }
 
 /**
+ * Check trial status from server (DeviceIdentity.trialCompletedAt)
+ * Should be called on page load to sync with server state
+ */
+export async function syncTrialStatusFromServer() {
+  if (typeof window === "undefined") return;
+  
+  try {
+    const res = await fetch("/api/trial/status");
+    if (!res.ok) return;
+    
+    const data = await res.json();
+    if (!data.trialActive && data.trialCompletedAt) {
+      // Server says trial is complete, sync localStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem(TRIAL_KEY, "false");
+      }
+    }
+  } catch (err) {
+    console.error("Failed to sync trial status:", err);
+  }
+}
+
+/**
  * Check if trial should be reset via query param
  * Usage: ?denemeSifirla=1
+ * Only works in non-production or when PAYMENT_TEST_MODE is enabled
  */
 export function checkTrialResetParam() {
   if (typeof window === "undefined") return;
+  
+  // Only allow in development or test mode
+  const isDev = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  const isTest = document.cookie.includes("PAYMENT_TEST_MODE=true");
+  
+  if (!isDev && !isTest) return;
+  
   const params = new URLSearchParams(window.location.search);
   if (params.get("denemeSifirla") === "1") {
     resetTrial();

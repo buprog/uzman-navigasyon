@@ -39,6 +39,10 @@ body {
 .card {
   @apply rounded-xl border border-slate-200 bg-white p-5 shadow-sm;
 }
+
+[data-mode="night"] .card {
+  @apply bg-slate-800 border-slate-700;
+}
 .badge-basic {
   @apply inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600;
 }

@@ -93,7 +93,7 @@ export default function TurlarPage() {
         {tours.map((t) => (
           <div key={t.id} className="card flex flex-col">
             <div className="flex items-start justify-between gap-2">
-              <h2 className="font-semibold text-slate-900">{t.name}</h2>
+              <h2 className="font-semibold text-slate-900 [html[data-mode='night']_&]:text-slate-100">{t.name}</h2>
               {t.isSample && (
                 <Link
                   href={`/planlayici/${t.id}`}

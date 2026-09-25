@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { customAlphabet } from "nanoid";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
-import { countActiveDepartures, LIMIT_MESSAGES, limitsFor } from "@/lib/plan";
+import { countActiveDepartures, LIMIT_MESSAGES, limitsFor, getEffectivePlan } from "@/lib/plan";
 
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 10);
 
@@ -28,7 +28,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const body = await req.json();
   const status = String(body.status || "taslak");
-  const limits = limitsFor(user.plan);
+  const effectivePlan = getEffectivePlan(user.plan, user.premiumExpiresAt);
+  const limits = limitsFor(effectivePlan);
 
   if (status === "yayin" || status === "dolu") {
     const active = await countActiveDepartures(user.id);

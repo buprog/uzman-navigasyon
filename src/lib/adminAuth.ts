@@ -26,7 +26,7 @@ export async function createAdminSession(
   cookies().set(ADMIN_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax", // Allow OAuth callback cross-site navigation
     path: "/",
     maxAge: 60 * 60 * 8, // 8 hours
   });
@@ -40,13 +40,15 @@ export async function getAdminSession(): Promise<string | null> {
   const token = cookies().get(ADMIN_COOKIE)?.value;
   if (!token) return null;
 
-  const parts = token.split(".");
-  if (parts.length < 4) return null; // email.sub.timestamp.signature
-
-  const sig = parts.pop()!;
-  const payload = parts.join(".");
+  // Split by last dot to get signature
+  const lastDotIndex = token.lastIndexOf('.');
+  if (lastDotIndex === -1) return null;
+  
+  const payload = token.substring(0, lastDotIndex);
+  const sig = token.substring(lastDotIndex + 1);
   const expected = sign(payload);
 
+  // Verify signature
   try {
     const a = Buffer.from(sig);
     const b = Buffer.from(expected);
@@ -55,8 +57,34 @@ export async function getAdminSession(): Promise<string | null> {
     return null;
   }
 
-  const email = parts[0];
+  // Parse payload: email.sub.timestamp
+  const parts = payload.split('.');
+  if (parts.length < 3) return null;
+  
+  // Last part is timestamp, second-to-last is sub, rest is email
+  const timestamp = parts[parts.length - 1];
+  const email = parts.slice(0, parts.length - 2).join('.');
+  
   if (!email) return null;
+
+  // Verify token age (8 hours max)
+  const tokenTime = parseInt(timestamp, 10);
+  if (isNaN(tokenTime)) return null;
+  
+  const now = Date.now();
+  const maxAge = 8 * 60 * 60 * 1000; // 8 hours
+  if (now - tokenTime > maxAge) {
+    return null; // Token expired
+  }
+
+  // Re-check email against allowlist
+  const allowedEmails = process.env.ADMIN_ALLOWED_EMAILS;
+  if (!allowedEmails) return null;
+  
+  const allowedList = allowedEmails.split(',').map(e => e.trim().toLowerCase());
+  if (!allowedList.includes(email.toLowerCase())) {
+    return null; // Email no longer in allowlist
+  }
 
   return email;
 }

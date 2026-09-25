@@ -104,7 +104,7 @@ export default function ThemeSettingsPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
+    <div className="mx-auto max-w-2xl px-4 py-8 min-h-[calc(100vh-57px)] bg-slate-50 [html[data-mode='night']_&]:bg-slate-900">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 [html[data-mode='night']_&]:text-slate-100 mb-2">Görünüm Ayarları</h1>
         <p className="text-sm text-slate-600 [html[data-mode='night']_&]:text-slate-300">

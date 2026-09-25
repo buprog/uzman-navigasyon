@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
-import { countActiveDepartures, LIMIT_MESSAGES, limitsFor } from "@/lib/plan";
+import { countActiveDepartures, LIMIT_MESSAGES, limitsFor, getEffectivePlan } from "@/lib/plan";
 
 async function ownedDeparture(id: string, userId: string) {
   return prisma.departure.findFirst({
@@ -26,7 +26,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const becomingActive = (status === "yayin" || status === "dolu") &&
       existing.status !== "yayin" && existing.status !== "dolu";
     if (becomingActive) {
-      const limits = limitsFor(user.plan);
+      const effectivePlan = getEffectivePlan(user.plan, user.premiumExpiresAt);
+      const limits = limitsFor(effectivePlan);
       const active = await countActiveDepartures(user.id);
       if (active >= limits.maxActiveDepartures) {
         return NextResponse.json(

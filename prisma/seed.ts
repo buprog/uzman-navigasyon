@@ -171,13 +171,13 @@ async function main() {
     },
   });
 
-  // Upsert sample departure (idempotent, preserve share code)
-  const sampleDepartureId = "sample-departure-kapadokya";
+  // Upsert sample departure by shareCode (idempotent, non-destructive)
   const sampleShareCode = "5d5e0rljyk"; // Fixed share code for sample tour
   
   const departure = await prisma.departure.upsert({
-    where: { id: sampleDepartureId },
+    where: { shareCode: sampleShareCode },
     update: {
+      tourId: tour.id,
       date: "2026-05-10",
       capacity: 16,
       bookedCount: 0,
@@ -185,7 +185,6 @@ async function main() {
       note: "Örnek yayınlı kalkış",
     },
     create: {
-      id: sampleDepartureId,
       tourId: tour.id,
       date: "2026-05-10",
       capacity: 16,

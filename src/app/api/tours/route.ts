@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
-import { countTours, LIMIT_MESSAGES, limitsFor } from "@/lib/plan";
+import { countTours, LIMIT_MESSAGES, limitsFor, getEffectivePlan } from "@/lib/plan";
 import { computeDayCount } from "@/lib/dayCount";
 import { addTourOwnership } from "@/lib/tourOwnership";
 
@@ -23,14 +23,16 @@ export async function GET() {
       _count: { select: { stops: true, departures: true } },
     },
   });
-  return NextResponse.json({ tours, plan: user.plan, limits: limitsFor(user.plan) });
+  const effectivePlan = getEffectivePlan(user.plan, user.premiumExpiresAt);
+  return NextResponse.json({ tours, plan: effectivePlan, limits: limitsFor(effectivePlan) });
 }
 
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Giriş gerekli." }, { status: 401 });
 
-  const limits = limitsFor(user.plan);
+  const effectivePlan = getEffectivePlan(user.plan, user.premiumExpiresAt);
+  const limits = limitsFor(effectivePlan);
   const current = await countTours(user.id);
   if (current >= limits.maxTours) {
     return NextResponse.json(

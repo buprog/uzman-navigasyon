@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isAdminRequest, isInternalAdminPath, rewriteAdminPath, getAdminPath } from '@/lib/adminPath';
 
-const ADMIN_REWRITE_HEADER = 'x-admin-rewrite';
-
 function getClientIp(request: NextRequest): string {
   return request.headers.get('x-forwarded-for')?.split(',')[0].trim() 
     || request.headers.get('x-real-ip') 
@@ -47,12 +45,11 @@ export function middleware(request: NextRequest) {
   // Check if admin panel is enabled
   const adminPath = getAdminPath();
   
-  // Block direct access to internal admin path
+  // Always block direct access to internal admin path
+  // Next.js doesn't re-run middleware on rewrites, so rewritten requests
+  // naturally reach the internal path without hitting this check
   if (isInternalAdminPath(pathname)) {
-    // Only allow if coming from our rewrite (has the special header)
-    if (!request.headers.get(ADMIN_REWRITE_HEADER)) {
-      return new NextResponse(null, { status: 404 });
-    }
+    return new NextResponse(null, { status: 404 });
   }
   
   // Handle admin requests
@@ -74,11 +71,7 @@ export function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = rewrittenPath;
     
-    // Add header to mark as from rewrite
-    const headers = new Headers(request.headers);
-    headers.set(ADMIN_REWRITE_HEADER, 'true');
-    
-    const response = NextResponse.rewrite(url, { request: { headers } });
+    const response = NextResponse.rewrite(url);
     
     // Add security headers for admin
     response.headers.set('X-Robots-Tag', 'noindex, nofollow');
