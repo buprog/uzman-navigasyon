@@ -30,12 +30,20 @@ export function DiscountCodesTab() {
   const [statusFilter, setStatusFilter] = useState<"hepsi" | "aktif" | "pasif">(
     "hepsi"
   );
+  const [grupFilter, setGrupFilter] = useState<string>("");
   const [searchText, setSearchText] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showBulkForm, setShowBulkForm] = useState(false);
+  const [showAssignContactModal, setShowAssignContactModal] = useState(false);
   const [editingCode, setEditingCode] = useState<DiscountCode | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [assignContactForm, setAssignContactForm] = useState({
+    fullName: "",
+    company: "",
+    phone: "",
+    email: "",
+  });
 
   // Form states
   const [form, setForm] = useState({
@@ -248,10 +256,11 @@ export function DiscountCodesTab() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
+        const dateStr = new Date().toISOString().split("T")[0].replace(/-/g, "");
         a.download =
           format === "xlsx"
-            ? `indirim-kodlari-${new Date().toISOString().split("T")[0]}.xlsx`
-            : `indirim-kodlari-${new Date().toISOString().split("T")[0]}.txt`;
+            ? `indirim-kodlari-${dateStr}.xlsx`
+            : `indirim-kodlari-${dateStr}.txt`;
         a.click();
         window.URL.revokeObjectURL(url);
       } else if (res.ok) {
@@ -264,6 +273,44 @@ export function DiscountCodesTab() {
       }
     } catch (err) {
       console.error("Failed to perform bulk action:", err);
+      alert("İşlem başarısız");
+    }
+  }
+
+  async function handleAssignContact() {
+    if (selectedIds.size === 0) {
+      alert("Lütfen en az bir kod seçin");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/discount/bulk-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "assign_contact",
+          ids: Array.from(selectedIds),
+          contactInfo: assignContactForm,
+        }),
+      });
+
+      if (res.ok) {
+        setShowAssignContactModal(false);
+        setAssignContactForm({
+          fullName: "",
+          company: "",
+          phone: "",
+          email: "",
+        });
+        fetchCodes();
+        setSelectedIds(new Set());
+        alert("İletişim bilgileri atandı");
+      } else {
+        const data = await res.json();
+        alert(data.error || "İşlem başarısız");
+      }
+    } catch (err) {
+      console.error("Failed to assign contact:", err);
       alert("İşlem başarısız");
     }
   }
@@ -335,6 +382,9 @@ export function DiscountCodesTab() {
       if (statusFilter === "aktif" && !isActive) return false;
       if (statusFilter === "pasif" && isActive) return false;
     }
+    if (grupFilter && c.batchName !== grupFilter) {
+      return false;
+    }
     if (searchText) {
       const lower = searchText.toLowerCase();
       return (
@@ -348,6 +398,11 @@ export function DiscountCodesTab() {
     }
     return true;
   });
+
+  // Get unique batch names for grup filter
+  const uniqueBatchNames = Array.from(
+    new Set(codes.map((c) => c.batchName).filter((b) => b))
+  ).sort();
 
   if (loading) {
     return (
@@ -390,6 +445,23 @@ export function DiscountCodesTab() {
             <option value="hepsi">Hepsi</option>
             <option value="aktif">Aktif</option>
             <option value="pasif">Pasif</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-600 uppercase">
+            Grup
+          </label>
+          <select
+            value={grupFilter}
+            onChange={(e) => setGrupFilter(e.target.value)}
+            className="input mt-1"
+          >
+            <option value="">Hepsi</option>
+            {uniqueBatchNames.map((name) => (
+              <option key={name} value={name || ""}>
+                {name}
+              </option>
+            ))}
           </select>
         </div>
         <div className="flex-1">
@@ -435,6 +507,12 @@ export function DiscountCodesTab() {
             className="btn-secondary text-sm"
           >
             🚫 Pasif Yap
+          </button>
+          <button
+            onClick={() => setShowAssignContactModal(true)}
+            className="btn-secondary text-sm"
+          >
+            👤 Kişi/Firma Ata
           </button>
           <button
             onClick={() => handleBulkAction("delete")}
@@ -1021,6 +1099,89 @@ export function DiscountCodesTab() {
               </button>
               <button onClick={handleSaveEdit} className="btn-primary">
                 Kaydet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Contact Modal */}
+      {showAssignContactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full my-8 p-6">
+            <h3 className="text-xl font-bold mb-4">
+              Kişi/Firma Bilgisi Ata ({selectedIds.size} kod)
+            </h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">İsim Soyisim</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={assignContactForm.fullName}
+                    onChange={(e) =>
+                      setAssignContactForm({ ...assignContactForm, fullName: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="label">Firma</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={assignContactForm.company}
+                    onChange={(e) =>
+                      setAssignContactForm({ ...assignContactForm, company: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Telefon</label>
+                  <input
+                    type="tel"
+                    className="input"
+                    value={assignContactForm.phone}
+                    onChange={(e) =>
+                      setAssignContactForm({ ...assignContactForm, phone: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="label">E-posta</label>
+                  <input
+                    type="email"
+                    className="input"
+                    value={assignContactForm.email}
+                    onChange={(e) =>
+                      setAssignContactForm({ ...assignContactForm, email: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <p className="text-sm text-slate-600">
+                Bu bilgiler seçili tüm kodlara atanacak. Boş bırakılan alanlar değiştirilmez.
+              </p>
+            </div>
+            <div className="mt-6 flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowAssignContactModal(false);
+                  setAssignContactForm({
+                    fullName: "",
+                    company: "",
+                    phone: "",
+                    email: "",
+                  });
+                }}
+                className="btn-secondary"
+              >
+                İptal
+              </button>
+              <button onClick={handleAssignContact} className="btn-primary">
+                Ata
               </button>
             </div>
           </div>

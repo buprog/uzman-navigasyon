@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
-import { generateDiscountCode, normalizeDiscountCode } from "@/lib/discountCode";
+import { generateDiscountCode } from "@/lib/discountCodeGen";
+import { normalizeDiscountCode } from "@/lib/discountCode";
 
 export const dynamic = "force-dynamic";
 

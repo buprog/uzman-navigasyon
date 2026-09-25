@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 export const dynamic = "force-dynamic";
 
@@ -42,38 +42,55 @@ export async function POST(req: Request) {
     switch (action) {
       case "export": {
         if (format === "xlsx") {
-          // Export as Excel
-          const rows = codes.map((c) => ({
-            Kod: c.code,
-            Tür:
-              c.type === "PREMIUM_DAYS"
-                ? `Premium (${c.premiumDays} gün)`
-                : `İndirim %${c.percent}`,
-            "İsim Soyisim": c.fullName || "",
-            Firma: c.company || "",
-            Telefon: c.phone || "",
-            "E-posta": c.email || "",
-            Başlangıç: c.startsAt.toISOString().split("T")[0],
-            Bitiş: c.endsAt.toISOString().split("T")[0],
-            Kullanım: `${c.usedCount}/${c.maxUses}`,
-            Grup: c.batchName || "",
-            Not: c.note || "",
-          }));
+          // Export as Excel using exceljs
+          const workbook = new ExcelJS.Workbook();
+          const worksheet = workbook.addWorksheet("İndirim Kodları");
 
-          const worksheet = XLSX.utils.json_to_sheet(rows);
-          const workbook = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(workbook, worksheet, "İndirim Kodları");
+          // Add headers
+          worksheet.columns = [
+            { header: "Kod", key: "code", width: 20 },
+            { header: "Tür", key: "type", width: 20 },
+            { header: "İsim Soyisim", key: "fullName", width: 25 },
+            { header: "Firma", key: "company", width: 25 },
+            { header: "Telefon", key: "phone", width: 15 },
+            { header: "E-posta", key: "email", width: 30 },
+            { header: "Başlangıç", key: "startsAt", width: 12 },
+            { header: "Bitiş", key: "endsAt", width: 12 },
+            { header: "Kullanım", key: "usage", width: 12 },
+            { header: "Grup", key: "batchName", width: 20 },
+            { header: "Not", key: "note", width: 30 },
+          ];
 
-          const buffer = XLSX.write(workbook, {
-            type: "buffer",
-            bookType: "xlsx",
+          // Add rows
+          codes.forEach((c) => {
+            worksheet.addRow({
+              code: c.code,
+              type:
+                c.type === "PREMIUM_DAYS"
+                  ? `Premium (${c.premiumDays} gün)`
+                  : `İndirim %${c.percent}`,
+              fullName: c.fullName || "",
+              company: c.company || "",
+              phone: c.phone || "",
+              email: c.email || "",
+              startsAt: c.startsAt.toISOString().split("T")[0],
+              endsAt: c.endsAt.toISOString().split("T")[0],
+              usage: `${c.usedCount}/${c.maxUses}`,
+              batchName: c.batchName || "",
+              note: c.note || "",
+            });
           });
+
+          // Generate buffer
+          const buffer = await workbook.xlsx.writeBuffer();
+
+          const dateStr = new Date().toISOString().split("T")[0].replace(/-/g, "");
 
           return new NextResponse(buffer, {
             headers: {
               "Content-Type":
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-              "Content-Disposition": `attachment; filename="indirim-kodlari-${new Date().toISOString().split("T")[0]}.xlsx"`,
+              "Content-Disposition": `attachment; filename="indirim-kodlari-${dateStr}.xlsx"`,
             },
           });
         } else if (format === "txt") {
@@ -95,10 +112,12 @@ export async function POST(req: Request) {
             content = codes.map((c) => c.code).join("\n");
           }
 
+          const dateStr = new Date().toISOString().split("T")[0].replace(/-/g, "");
+
           return new NextResponse(content, {
             headers: {
               "Content-Type": "text/plain; charset=utf-8",
-              "Content-Disposition": `attachment; filename="indirim-kodlari-${new Date().toISOString().split("T")[0]}.txt"`,
+              "Content-Disposition": `attachment; filename="indirim-kodlari-${dateStr}.txt"`,
             },
           });
         }

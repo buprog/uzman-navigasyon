@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
-import { generateDiscountCode } from "@/lib/discountCode";
+import { generateDiscountCode } from "@/lib/discountCodeGen";
 import { nanoid } from "nanoid";
 
 export const dynamic = "force-dynamic";

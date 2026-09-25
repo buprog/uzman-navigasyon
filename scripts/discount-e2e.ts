@@ -1,22 +1,24 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S npx tsx
 
 /**
  * Discount Code E2E Test Script
  * 
- * Usage: node scripts/discount-e2e.ts
+ * Usage: npx tsx scripts/discount-e2e.ts
  * Requires: DATABASE_URL environment variable
  * 
  * This script:
  * 1. Creates a test discount code
  * 2. Redeems it via the live API for deviceId 'test-device-grokbot'
  * 3. Verifies the redemption
- * 4. Cleans up: deletes the code, redemption, and device premium
+ * 4. Cleans up: deletes the code, redemption, and device identity (if created)
  */
 
 const { PrismaClient } = require("@prisma/client");
+const nodeCrypto = require("node:crypto");
 
 const TEST_DEVICE_ID = "test-device-grokbot";
 const TEST_CODE_PREFIX = "E2ETEST";
+const DEFAULT_BASE_URL = "https://uzman-navigasyon.vercel.app";
 
 async function main() {
   if (!process.env.DATABASE_URL) {
@@ -28,10 +30,18 @@ async function main() {
 
   console.log("🧪 Discount Code E2E Test\n");
 
+  // Track if we created the device
+  let createdDevice = false;
+
   try {
+    // Check if device already exists
+    const existingDevice = await prisma.deviceIdentity.findUnique({
+      where: { deviceId: TEST_DEVICE_ID },
+    });
+
     // Step 1: Create a test code
     console.log("1️⃣ Creating test discount code...");
-    const testCode = `${TEST_CODE_PREFIX}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const testCode = `${TEST_CODE_PREFIX}-${nodeCrypto.randomInt(100000, 999999)}`;
     const now = new Date();
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
@@ -51,9 +61,8 @@ async function main() {
 
     // Step 2: Redeem via live API
     console.log("\n2️⃣ Redeeming code via API...");
-    const apiUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}/api/discount/redeem`
-      : "http://localhost:3000/api/discount/redeem";
+    const baseUrl = process.env.BASE_URL || DEFAULT_BASE_URL;
+    const apiUrl = `${baseUrl}/api/discount/redeem`;
 
     const redeemResponse = await fetch(apiUrl, {
       method: "POST",
@@ -75,6 +84,11 @@ async function main() {
     console.log(`   Type: ${redeemData.type}`);
     console.log(`   Premium Days: ${redeemData.premiumDays}`);
     console.log(`   Premium Until: ${redeemData.premiumUntil}`);
+
+    // Mark that we may have created the device
+    if (!existingDevice) {
+      createdDevice = true;
+    }
 
     // Step 3: Verify redemption in database
     console.log("\n3️⃣ Verifying redemption...");
@@ -117,8 +131,14 @@ async function main() {
     });
     console.log(`✅ Deleted code`);
 
-    // Reset device premium
-    if (device) {
+    // Delete device identity if we created it
+    if (createdDevice && device) {
+      await prisma.deviceIdentity.delete({
+        where: { id: device.id },
+      });
+      console.log(`✅ Deleted test device identity`);
+    } else if (device) {
+      // Just reset premium if device existed before
       await prisma.deviceIdentity.update({
         where: { id: device.id },
         data: { premiumExpiresAt: null },
@@ -140,10 +160,25 @@ async function main() {
           },
         },
       });
-      await prisma.deviceIdentity.updateMany({
+      
+      // If we created the device, delete it; otherwise just reset premium
+      const device = await prisma.deviceIdentity.findUnique({
         where: { deviceId: TEST_DEVICE_ID },
-        data: { premiumExpiresAt: null },
       });
+      
+      if (device) {
+        if (createdDevice) {
+          await prisma.deviceIdentity.delete({
+            where: { id: device.id },
+          });
+        } else {
+          await prisma.deviceIdentity.update({
+            where: { id: device.id },
+            data: { premiumExpiresAt: null },
+          });
+        }
+      }
+      
       console.log("✅ Cleanup completed");
     } catch (cleanupError) {
       console.error("❌ Cleanup failed:", cleanupError);

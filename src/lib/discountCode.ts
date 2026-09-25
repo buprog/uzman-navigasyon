@@ -1,5 +1,5 @@
 /**
- * Discount code utilities - status computation, validation, and code generation
+ * Discount code utilities - status computation and validation
  */
 
 export type DiscountCodeType = "PREMIUM_DAYS" | "PERCENT";
@@ -49,20 +49,6 @@ export function getDiscountCodeStatus(code: {
   }
 
   return { status: "Aktif" };
-}
-
-/**
- * Generate a random discount code
- * Format: PREFIX-XXXXXX
- * Alphabet: A-Z excluding ambiguous chars (O, I)
- */
-const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Excluding O, I, 0, 1
-
-export function generateDiscountCode(prefix: string = "DISC"): string {
-  const suffix = Array.from({ length: 6 }, () =>
-    CODE_ALPHABET.charAt(Math.floor(Math.random() * CODE_ALPHABET.length))
-  ).join("");
-  return `${prefix.toUpperCase()}-${suffix}`;
 }
 
 /**
