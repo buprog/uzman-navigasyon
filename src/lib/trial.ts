@@ -64,7 +64,13 @@ export async function completeTrialServerSide() {
       localStorage.setItem(TRIAL_KEY, "false");
     }
     
-    // Also persist to server
+    // Ensure device identity exists first (creates cookie if needed)
+    if (typeof window !== "undefined") {
+      const { getDeviceIdentity } = await import("@/lib/deviceIdentity");
+      await getDeviceIdentity();
+    }
+    
+    // Persist to server
     await fetch("/api/trial/complete", {
       method: "POST",
     });
@@ -126,18 +132,23 @@ export async function syncTrialStatusFromServer() {
  * Usage: ?denemeSifirla=1
  * Only works in non-production or when PAYMENT_TEST_MODE is enabled
  */
-export function checkTrialResetParam() {
+export async function checkTrialResetParam() {
   if (typeof window === "undefined") return;
   
-  // Only allow in development or test mode
-  const isDev = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-  const isTest = document.cookie.includes("PAYMENT_TEST_MODE=true");
-  
-  if (!isDev && !isTest) return;
-  
   const params = new URLSearchParams(window.location.search);
-  if (params.get("denemeSifirla") === "1") {
-    resetTrial();
-    window.location.search = "";
+  if (params.get("denemeSifirla") !== "1") return;
+  
+  // Check with server if test mode is enabled
+  try {
+    const res = await fetch("/api/trial/reset-check");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.allowed) {
+        resetTrial();
+        window.location.search = "";
+      }
+    }
+  } catch {
+    // Silent fail if API unavailable
   }
 }

@@ -87,8 +87,8 @@ export default function NavigasyonPage() {
   useEffect(() => {
     load();
     
-    // Check trial reset param
-    checkTrialResetParam();
+    // Check trial reset param (async server check)
+    void checkTrialResetParam();
     
     // Sync trial state from server
     syncTrialStatusFromServer().then(() => {

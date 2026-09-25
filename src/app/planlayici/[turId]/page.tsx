@@ -127,7 +127,8 @@ export default function PlanlayiciPage() {
 
   useEffect(() => {
     // Check for trial reset param
-    checkTrialResetParam();
+    // Check trial reset param (async server check)
+    void checkTrialResetParam();
     
     // Sync trial state from server
     syncTrialStatusFromServer().then(() => {
