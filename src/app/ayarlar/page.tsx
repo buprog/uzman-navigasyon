@@ -51,6 +51,9 @@ export default function AyarlarPage() {
   const [vehicleMsg, setVehicleMsg] = useState("");
   const [vehicle, setVehicle] = useState<VehicleForm>(emptyVehicle);
   const [savingVehicle, setSavingVehicle] = useState(false);
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountMsg, setDiscountMsg] = useState("");
+  const [redeemingCode, setRedeemingCode] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -135,6 +138,52 @@ export default function AyarlarPage() {
     if (res.ok) {
       setUser(data.user);
       setMsg(data.message);
+    }
+  }
+
+  async function redeemCode(e: React.FormEvent) {
+    e.preventDefault();
+    setRedeemingCode(true);
+    setDiscountMsg("");
+
+    try {
+      // Get device ID
+      const { getDeviceIdentity } = await import("@/lib/deviceIdentity");
+      const { deviceId } = await getDeviceIdentity();
+
+      const res = await fetch("/api/discount/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: discountCode,
+          deviceId,
+          platform: "web",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        if (data.type === "PREMIUM_DAYS") {
+          setDiscountMsg(
+            `✅ Kod başarıyla kullanıldı! ${data.premiumDays} gün premium kazandınız. Premium tarihiniz: ${new Date(data.premiumUntil).toLocaleDateString("tr-TR")}`
+          );
+          // Reload to update premium status
+          setTimeout(() => window.location.reload(), 2000);
+        } else {
+          setDiscountMsg(
+            `✅ Kod başarıyla kullanıldı! %${data.percent} indirim kazandınız.`
+          );
+        }
+        setDiscountCode("");
+      } else {
+        setDiscountMsg(`❌ ${data.message}`);
+      }
+    } catch (err) {
+      console.error("Failed to redeem code:", err);
+      setDiscountMsg("❌ Bir hata oluştu");
+    } finally {
+      setRedeemingCode(false);
     }
   }
 
@@ -388,6 +437,33 @@ export default function AyarlarPage() {
             durumda doğrudan 112’yi arayın.
           </p>
         </div>
+      </div>
+
+      <div className="card mt-6">
+        <h2 className="font-semibold">İndirim Kodu</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          İndirim kodunuz varsa buradan uygulayabilirsiniz.
+        </p>
+        <form className="mt-4 flex gap-2" onSubmit={redeemCode}>
+          <input
+            type="text"
+            className="input flex-1"
+            value={discountCode}
+            onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+            placeholder="DISC-XXXXXX"
+            disabled={redeemingCode}
+          />
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={redeemingCode || !discountCode.trim()}
+          >
+            {redeemingCode ? "Uygulanıyor..." : "Uygula"}
+          </button>
+        </form>
+        {discountMsg && (
+          <p className="mt-3 text-sm text-slate-700">{discountMsg}</p>
+        )}
       </div>
 
       <div className="card mt-6">
