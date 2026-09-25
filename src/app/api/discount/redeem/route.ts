@@ -210,6 +210,40 @@ export async function POST(req: Request) {
           };
         }
 
+        // For FAMILY codes, check in_other_family BEFORE claiming use
+        if (discountCode.type === "FAMILY") {
+          // Acquire device lock to enforce one-family-per-device atomically
+          const deviceLock = hashStringTo32bit(deviceId);
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${deviceLock})`;
+
+          // Check if device is already a MEMBER in another family
+          const existingMembership = await tx.familyMember.findFirst({
+            where: {
+              deviceId,
+              removedAt: null,
+            },
+            include: {
+              family: true,
+            },
+          });
+
+          if (existingMembership) {
+            // Check if it's not their own OWNER membership
+            if (existingMembership.role === "MEMBER" && existingMembership.family.status === "ACTIVE") {
+              // Device is a MEMBER in another family - cannot create their own family
+              // Return early WITHOUT claiming the code use
+              return {
+                status: 409,
+                body: {
+                  ok: false,
+                  error: "in_other_family",
+                  message: "Başka bir ailenin üyesisiniz, önce ayrılmanız gerekiyor",
+                },
+              };
+            }
+          }
+        }
+
         // Atomically claim a use with conditional update
         const updated = await tx.discountCode.updateMany({
           where: {
@@ -320,35 +354,7 @@ export async function POST(req: Request) {
             });
           }
         } else if (discountCode.type === "FAMILY") {
-          // Acquire device lock to enforce one-family-per-device atomically
-          const deviceLock = hashStringTo32bit(deviceId);
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${deviceLock})`;
-
-          // Check if device is already a MEMBER in another family
-          const existingMembership = await tx.familyMember.findFirst({
-            where: {
-              deviceId,
-              removedAt: null,
-            },
-            include: {
-              family: true,
-            },
-          });
-
-          if (existingMembership) {
-            // Check if it's not their own OWNER membership
-            if (existingMembership.role === "MEMBER" && existingMembership.family.status === "ACTIVE") {
-              // Device is a MEMBER in another family - cannot create their own family
-              return {
-                status: 409,
-                body: {
-                  ok: false,
-                  error: "in_other_family",
-                  message: "Başka bir ailenin üyesisiniz, önce ayrılmanız gerekiyor",
-                },
-              };
-            }
-          }
+          // Device lock already acquired above for FAMILY type
 
           // Create or extend family plan
           const maxMembers = discountCode.familyMaxMembers || 5;

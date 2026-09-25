@@ -94,28 +94,6 @@ export async function POST(req: Request) {
       const deviceLock = hashStringTo32bit(deviceId);
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${deviceLock})`;
 
-      // Check if device is already in another family
-      const existingMembership = await tx.familyMember.findFirst({
-        where: {
-          deviceId,
-          removedAt: null,
-        },
-        include: {
-          family: true,
-        },
-      });
-
-      if (existingMembership && existingMembership.family.status === "ACTIVE") {
-        return {
-          status: 409,
-          body: {
-            ok: false,
-            error: "in_other_family",
-            message: "Başka bir ailenin üyesisiniz",
-          },
-        };
-      }
-
       // Find the family and lock it for atomic seat claiming
       const familyRow = await tx.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM "FamilyPlan" WHERE "inviteCode" = ${inviteCode.toUpperCase().trim()} FOR UPDATE
@@ -178,28 +156,54 @@ export async function POST(req: Request) {
         };
       }
 
-      // Check if device already has an inactive membership (rejoin case)
-      const inactiveMembership = await tx.familyMember.findFirst({
+      // Check if device is already a member of THIS family
+      const existingMembershipSameFamily = await tx.familyMember.findFirst({
         where: {
           familyId: family.id,
           deviceId,
         },
       });
 
-      if (inactiveMembership) {
-        if (!inactiveMembership.removedAt) {
-          // Already an active member
-          return {
-            status: 409,
-            body: {
-              ok: false,
-              error: "already_member",
-              message: "Zaten bu ailenin üyesisiniz",
-              premiumUntil: family.premiumUntil.toISOString(),
-            },
-          };
-        }
+      if (existingMembershipSameFamily && !existingMembershipSameFamily.removedAt) {
+        // Already an active member of THIS family
+        return {
+          status: 409,
+          body: {
+            ok: false,
+            error: "already_member",
+            message: "Zaten bu ailenin üyesisiniz",
+            premiumUntil: family.premiumUntil.toISOString(),
+          },
+        };
+      }
 
+      // Check if device is in a DIFFERENT active family
+      const existingMembershipOtherFamily = await tx.familyMember.findFirst({
+        where: {
+          deviceId,
+          removedAt: null,
+          NOT: {
+            familyId: family.id,
+          },
+        },
+        include: {
+          family: true,
+        },
+      });
+
+      if (existingMembershipOtherFamily && existingMembershipOtherFamily.family.status === "ACTIVE") {
+        return {
+          status: 409,
+          body: {
+            ok: false,
+            error: "in_other_family",
+            message: "Başka bir ailenin üyesisiniz",
+          },
+        };
+      }
+
+      // Handle rejoin case
+      if (existingMembershipSameFamily && existingMembershipSameFamily.removedAt) {
         // Reactivate the membership
         // Check if there's space
         if (family.members.length >= family.maxMembers) {
@@ -214,7 +218,7 @@ export async function POST(req: Request) {
         }
 
         await tx.familyMember.update({
-          where: { id: inactiveMembership.id },
+          where: { id: existingMembershipSameFamily.id },
           data: {
             removedAt: null,
             joinedAt: now,

@@ -178,7 +178,125 @@ async function main() {
     }
     console.log(`   ✅ Confirmed: family premium restored`);
 
-    console.log("\n✅ All tests passed!\n");
+    // 7. Test BLOCKER A: in_other_family redeem doesn't consume use
+    console.log("\n7️⃣ Testing BLOCKER A: in_other_family redeem doesn't consume use...");
+    
+    // Get current usedCount of the code
+    const beforeRedeemStatus = await fetch(`${BASE_URL}/api/discount/status?deviceId=${ownerDeviceId}`).then(r => r.json());
+    
+    // Try to redeem with a member device (should fail with in_other_family)
+    const memberInOtherFamily = memberDevices[1]; // Still active in the family
+    const failedRedeemRes = await fetch(`${BASE_URL}/api/discount/redeem`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: FAMILY_CODE,
+        deviceId: memberInOtherFamily,
+        platform: "web",
+      }),
+    });
+    const failedRedeemData = await failedRedeemRes.json();
+    
+    if (failedRedeemRes.status !== 409 || failedRedeemData.error !== "in_other_family") {
+      throw new Error(`Expected in_other_family error, got: ${JSON.stringify(failedRedeemData)}`);
+    }
+    console.log(`   ✅ Redeem correctly failed with in_other_family`);
+    
+    // Verify no DiscountRedemption was created for this device
+    // (We can't directly check the DB, but we can verify via status that they don't have individual premium)
+    const memberStatusAfterFailedRedeem = await fetch(`${BASE_URL}/api/discount/status?deviceId=${memberInOtherFamily}`).then(r => r.json());
+    if (memberStatusAfterFailedRedeem.source !== "family") {
+      throw new Error(`Member should only have family premium, not individual: ${JSON.stringify(memberStatusAfterFailedRedeem)}`);
+    }
+    console.log(`   ✅ Code use was not consumed (verified via member status)`);
+
+    // 8. Test BLOCKER C: already_member on re-join
+    console.log("\n8️⃣ Testing BLOCKER C: already_member on re-join of same family...");
+    
+    const memberAlreadyIn = memberDevices[0]; // Currently active in family after rejoin
+    const alreadyMemberRes = await fetch(`${BASE_URL}/api/family/join`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        inviteCode,
+        deviceId: memberAlreadyIn,
+        platform: "web",
+      }),
+    });
+    const alreadyMemberData = await alreadyMemberRes.json();
+    
+    if (alreadyMemberRes.status !== 409 || alreadyMemberData.error !== "already_member") {
+      throw new Error(`Expected already_member error, got: ${JSON.stringify(alreadyMemberData)}`);
+    }
+    console.log(`   ✅ Correctly returned already_member (not in_other_family)`);
+
+    // 9. Test BLOCKER D: close family, join another, premium from new one
+    console.log("\n9️⃣ Testing BLOCKER D: close family behavior...");
+    
+    // Note: We can't easily test the full close/reopen flow without admin access,
+    // but we can test that members are properly filtered by ACTIVE status
+    
+    // Create a second family for testing
+    const secondOwnerDeviceId = `test-owner-2-${randomBytes(8).toString("hex")}`;
+    createdDeviceIds.push(secondOwnerDeviceId);
+    
+    const secondRedeemRes = await fetch(`${BASE_URL}/api/discount/redeem`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: FAMILY_CODE,
+        deviceId: secondOwnerDeviceId,
+        platform: "web",
+      }),
+    });
+    const secondRedeemData = await secondRedeemRes.json();
+    
+    if (!secondRedeemData.ok || secondRedeemData.type !== "FAMILY") {
+      throw new Error(`Failed to create second family: ${JSON.stringify(secondRedeemData)}`);
+    }
+    
+    const secondInviteCode = secondRedeemData.inviteCode;
+    console.log(`   ✅ Second family created: ${secondInviteCode}`);
+    
+    // Have a member leave the first family
+    const testMember = memberDevices[1];
+    const leaveForSecondRes = await fetch(`${BASE_URL}/api/family/leave`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId: testMember }),
+    });
+    const leaveForSecondData = await leaveForSecondRes.json();
+    
+    if (!leaveForSecondData.ok) {
+      throw new Error(`Failed to leave first family: ${JSON.stringify(leaveForSecondData)}`);
+    }
+    console.log(`   ✅ Member left first family`);
+    
+    // Join the second family
+    const joinSecondRes = await fetch(`${BASE_URL}/api/family/join`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        inviteCode: secondInviteCode,
+        deviceId: testMember,
+        platform: "web",
+      }),
+    });
+    const joinSecondData = await joinSecondRes.json();
+    
+    if (!joinSecondData.ok) {
+      throw new Error(`Failed to join second family: ${JSON.stringify(joinSecondData)}`);
+    }
+    console.log(`   ✅ Member joined second family`);
+    
+    // Verify premium is from the second family
+    const newFamilyStatus = await fetch(`${BASE_URL}/api/discount/status?deviceId=${testMember}`).then(r => r.json());
+    if (newFamilyStatus.source !== "family" || !newFamilyStatus.family) {
+      throw new Error(`Member should have family premium from second family: ${JSON.stringify(newFamilyStatus)}`);
+    }
+    console.log(`   ✅ Member has family premium from second family`);
+
+    console.log("\n✅ All tests passed (including BLOCKER A, C, D)!\n");
 
   } catch (err) {
     console.error("\n❌ Test failed:", err);

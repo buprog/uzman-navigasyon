@@ -36,7 +36,7 @@ type FamilyInfo = {
   role: "OWNER" | "MEMBER";
   inviteCode?: string;
   members?: Array<{
-    id: string;
+    memberId: string;
     deviceIdShort: string;
     role: string;
     joinedAt: string;
@@ -670,7 +670,7 @@ export default function AyarlarPage() {
                         </div>
                         {m.role !== "OWNER" && (
                           <button
-                            onClick={() => removeMember(m.id)}
+                            onClick={() => removeMember(m.memberId)}
                             className="text-red-600 hover:text-red-700 text-xs font-medium"
                           >
                             Çıkar

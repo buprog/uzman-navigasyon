@@ -21,10 +21,19 @@ export async function POST(req: Request) {
       );
     }
 
-    await prisma.familyPlan.updateMany({
-      where: { id: { in: ids } },
-      data: { status: "CLOSED" },
-    });
+    await prisma.$transaction([
+      prisma.familyPlan.updateMany({
+        where: { id: { in: ids } },
+        data: { status: "CLOSED" },
+      }),
+      prisma.familyMember.updateMany({
+        where: {
+          familyId: { in: ids },
+          removedAt: null,
+        },
+        data: { removedAt: new Date() },
+      }),
+    ]);
 
     const ip = req.headers.get("x-forwarded-for") || "unknown";
     await logAdminAccess(

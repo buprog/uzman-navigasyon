@@ -14,7 +14,7 @@ export type FamilyInfo = {
   role: "OWNER" | "MEMBER";
   inviteCode?: string; // owner only
   members?: Array<{
-    id: string; // member id for removal
+    memberId: string;
     deviceIdShort: string;
     role: "OWNER" | "MEMBER";
     joinedAt: string;
@@ -74,6 +74,9 @@ export async function getDevicePremiumStatus(
     where: {
       deviceId,
       removedAt: null,
+      family: {
+        status: "ACTIVE",
+      },
     },
     include: {
       family: {
@@ -111,7 +114,7 @@ export async function getDevicePremiumStatus(
     if (membership.role === "OWNER") {
       familyInfo.inviteCode = membership.family.inviteCode;
       familyInfo.members = membership.family.members.map((m) => ({
-        id: m.id,
+        memberId: m.id,
         deviceIdShort: m.deviceId.substring(0, 8),
         role: m.role as "OWNER" | "MEMBER",
         joinedAt: m.joinedAt.toISOString(),

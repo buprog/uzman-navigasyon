@@ -36,6 +36,9 @@ export async function POST(req: Request) {
         where: {
           deviceId,
           removedAt: null,
+          family: {
+            status: "ACTIVE",
+          },
         },
       });
 

@@ -38,6 +38,9 @@ export async function POST(req: Request) {
           deviceId: ownerDeviceId,
           role: "OWNER",
           removedAt: null,
+          family: {
+            status: "ACTIVE",
+          },
         },
         include: {
           family: {
