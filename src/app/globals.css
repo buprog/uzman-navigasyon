@@ -122,11 +122,11 @@ body {
 }
 
 [data-mode="night"] .text-slate-600 {
-  @apply text-slate-400;
+  @apply text-slate-300;
 }
 
 [data-mode="night"] .text-slate-500 {
-  @apply text-slate-400;
+  @apply text-slate-300;
 }
 
 [data-mode="night"] .text-gray-900 {
