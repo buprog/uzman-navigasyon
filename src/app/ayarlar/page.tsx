@@ -32,6 +32,18 @@ type VehicleForm = {
   tireTreadMm: string;
 };
 
+type FamilyInfo = {
+  role: "OWNER" | "MEMBER";
+  inviteCode?: string;
+  members?: Array<{
+    deviceIdShort: string;
+    role: string;
+    joinedAt: string;
+  }>;
+  maxMembers: number;
+  premiumUntil: string;
+};
+
 const emptyVehicle: VehicleForm = {
   vehicleMake: "",
   vehicleModel: "",
@@ -54,8 +66,29 @@ export default function AyarlarPage() {
   const [discountCode, setDiscountCode] = useState("");
   const [discountMsg, setDiscountMsg] = useState("");
   const [redeemingCode, setRedeemingCode] = useState(false);
+  const [familyInviteCode, setFamilyInviteCode] = useState("");
+  const [familyMsg, setFamilyMsg] = useState("");
+  const [familyInfo, setFamilyInfo] = useState<FamilyInfo | null>(null);
+  const [joiningFamily, setJoiningFamily] = useState(false);
+  const [deviceId, setDeviceId] = useState<string>("");
 
   useEffect(() => {
+    // Load device ID
+    (async () => {
+      const { getDeviceIdentity } = await import("@/lib/deviceIdentity");
+      const { deviceId: did } = await getDeviceIdentity();
+      setDeviceId(did);
+
+      // Check family status
+      const res = await fetch(`/api/discount/status?deviceId=${did}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.family) {
+          setFamilyInfo(data.family);
+        }
+      }
+    })();
+
     fetch("/api/auth/me")
       .then(async (r) => {
         if (r.status === 401) {
@@ -147,10 +180,6 @@ export default function AyarlarPage() {
     setDiscountMsg("");
 
     try {
-      // Get device ID
-      const { getDeviceIdentity } = await import("@/lib/deviceIdentity");
-      const { deviceId } = await getDeviceIdentity();
-
       const res = await fetch("/api/discount/redeem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -168,7 +197,11 @@ export default function AyarlarPage() {
           setDiscountMsg(
             `✅ Kod başarıyla kullanıldı! ${data.premiumDays} gün premium kazandınız. Premium tarihiniz: ${new Date(data.premiumUntil).toLocaleDateString("tr-TR")}`
           );
-          // Reload to update premium status
+          setTimeout(() => window.location.reload(), 2000);
+        } else if (data.type === "FAMILY") {
+          setDiscountMsg(
+            `✅ Aile üyeliği oluşturuldu! Davet kodunuz: ${data.inviteCode} (${data.maxMembers} kişilik)`
+          );
           setTimeout(() => window.location.reload(), 2000);
         } else {
           setDiscountMsg(
@@ -184,6 +217,127 @@ export default function AyarlarPage() {
       setDiscountMsg("❌ Bir hata oluştu");
     } finally {
       setRedeemingCode(false);
+    }
+  }
+
+  async function joinFamily(e: React.FormEvent) {
+    e.preventDefault();
+    setJoiningFamily(true);
+    setFamilyMsg("");
+
+    try {
+      const res = await fetch("/api/family/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inviteCode: familyInviteCode,
+          deviceId,
+          platform: "web",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        setFamilyMsg("✅ Aileye katıldınız!");
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        setFamilyMsg(`❌ ${data.message}`);
+      }
+    } catch (err) {
+      console.error("Failed to join family:", err);
+      setFamilyMsg("❌ Bir hata oluştu");
+    } finally {
+      setJoiningFamily(false);
+    }
+  }
+
+  async function leaveFamily() {
+    if (!confirm("Aileden ayrılmak istediğinize emin misiniz?")) return;
+
+    setFamilyMsg("");
+
+    try {
+      const res = await fetch("/api/family/leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceId }),
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        setFamilyMsg("✅ Aileden ayrıldınız");
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        setFamilyMsg(`❌ ${data.message}`);
+      }
+    } catch (err) {
+      console.error("Failed to leave family:", err);
+      setFamilyMsg("❌ Bir hata oluştu");
+    }
+  }
+
+  async function removeMember(memberDeviceIdShort: string) {
+    if (!confirm("Bu üyeyi çıkarmak istediğinize emin misiniz?")) return;
+
+    setFamilyMsg("");
+
+    try {
+      const res = await fetch("/api/family/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerDeviceId: deviceId,
+          memberDeviceIdShort,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        setFamilyMsg("✅ Üye çıkarıldı");
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        setFamilyMsg(`❌ ${data.message}`);
+      }
+    } catch (err) {
+      console.error("Failed to remove member:", err);
+      setFamilyMsg("❌ Bir hata oluştu");
+    }
+  }
+
+  async function regenerateInvite() {
+    if (!confirm("Davet kodu yenilenecek. Eski kod çalışmayacak. Emin misiniz?")) return;
+
+    setFamilyMsg("");
+
+    try {
+      const res = await fetch("/api/family/regenerate-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ownerDeviceId: deviceId }),
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        setFamilyMsg(`✅ Yeni davet kodu: ${data.inviteCode}`);
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        setFamilyMsg(`❌ ${data.message}`);
+      }
+    } catch (err) {
+      console.error("Failed to regenerate invite:", err);
+      setFamilyMsg("❌ Bir hata oluştu");
+    }
+  }
+
+  function copyInviteCode() {
+    if (familyInfo?.inviteCode) {
+      navigator.clipboard.writeText(familyInfo.inviteCode);
+      setFamilyMsg("✅ Davet kodu kopyalandı");
+      setTimeout(() => setFamilyMsg(""), 3000);
     }
   }
 
@@ -450,7 +604,7 @@ export default function AyarlarPage() {
             className="input flex-1"
             value={discountCode}
             onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-            placeholder="DISC-XXXXXX"
+            placeholder="DISC-XXXXXX veya AILE-XXXXXX"
             disabled={redeemingCode}
           />
           <button
@@ -465,6 +619,116 @@ export default function AyarlarPage() {
           <p className="mt-3 text-sm text-slate-700">{discountMsg}</p>
         )}
       </div>
+
+      {familyInfo ? (
+        <div className="card mt-6">
+          <h2 className="font-semibold">Aile Üyeliği 👨‍👩‍👧‍👦</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            {familyInfo.role === "OWNER" ? "Aile yöneticisisiniz" : "Bir ailenin üyesisiniz"}
+          </p>
+
+          <div className="mt-4 space-y-3">
+            {familyInfo.role === "OWNER" && (
+              <>
+                <div className="rounded-lg bg-teal-50 border border-teal-200 p-3">
+                  <p className="text-xs font-semibold text-teal-900 mb-1">Davet Kodu:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-lg font-bold text-teal-900">{familyInfo.inviteCode}</code>
+                    <button
+                      onClick={copyInviteCode}
+                      className="btn-secondary text-xs"
+                    >
+                      Kopyala
+                    </button>
+                    <button
+                      onClick={regenerateInvite}
+                      className="btn-secondary text-xs"
+                    >
+                      Yenile
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-slate-700 mb-2">
+                    Üyeler ({familyInfo.members?.length || 0} / {familyInfo.maxMembers}):
+                  </p>
+                  <div className="space-y-1">
+                    {familyInfo.members?.map((m) => (
+                      <div
+                        key={m.deviceIdShort}
+                        className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded border border-slate-200"
+                      >
+                        <div>
+                          <span className="text-sm font-medium text-slate-900">
+                            {m.deviceIdShort}
+                          </span>
+                          <span className="text-xs text-slate-600 ml-2">
+                            ({m.role === "OWNER" ? "Yönetici" : "Üye"})
+                          </span>
+                        </div>
+                        {m.role !== "OWNER" && (
+                          <button
+                            onClick={() => removeMember(m.deviceIdShort)}
+                            className="text-red-600 hover:text-red-700 text-xs font-medium"
+                          >
+                            Çıkar
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {familyInfo.role === "MEMBER" && (
+              <div className="space-y-2">
+                <p className="text-sm text-slate-700">
+                  Bir ailenin üyesisiniz. Premium {new Date(familyInfo.premiumUntil).toLocaleDateString("tr-TR")}'e kadar geçerli.
+                </p>
+                <button
+                  onClick={leaveFamily}
+                  className="btn-secondary text-sm"
+                >
+                  Aileden Ayrıl
+                </button>
+              </div>
+            )}
+
+            {familyMsg && (
+              <p className="text-sm text-slate-700">{familyMsg}</p>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="card mt-6">
+          <h2 className="font-semibold">Aileye Katıl 👨‍👩‍👧‍👦</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Bir aile davet kodunuz varsa buradan katılabilirsiniz.
+          </p>
+          <form className="mt-4 flex gap-2" onSubmit={joinFamily}>
+            <input
+              type="text"
+              className="input flex-1"
+              value={familyInviteCode}
+              onChange={(e) => setFamilyInviteCode(e.target.value.toUpperCase())}
+              placeholder="AILE-XXXXXX"
+              disabled={joiningFamily}
+            />
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={joiningFamily || !familyInviteCode.trim()}
+            >
+              {joiningFamily ? "Katılıyor..." : "Katıl"}
+            </button>
+          </form>
+          {familyMsg && (
+            <p className="mt-3 text-sm text-slate-700">{familyMsg}</p>
+          )}
+        </div>
+      )}
 
       <div className="card mt-6">
         <h2 className="font-semibold">Freemium (demo)</h2>
