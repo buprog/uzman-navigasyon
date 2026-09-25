@@ -17,6 +17,28 @@ export const PLAN_LIMITS = {
   },
 } as const;
 
+/**
+ * Resolve effective plan, checking if premium has expired
+ */
+export function getEffectivePlan(
+  plan: string | null | undefined,
+  premiumExpiresAt: Date | string | null | undefined
+): Plan {
+  if (plan !== "premium") return "basic";
+  
+  // Check if premium expired
+  if (premiumExpiresAt) {
+    const expiryDate = typeof premiumExpiresAt === "string" 
+      ? new Date(premiumExpiresAt) 
+      : premiumExpiresAt;
+    if (new Date() > expiryDate) {
+      return "basic";
+    }
+  }
+  
+  return "premium";
+}
+
 export function isPremium(plan: string | null | undefined): boolean {
   return plan === "premium";
 }

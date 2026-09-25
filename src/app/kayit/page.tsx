@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { getCurrentTourId } from "@/lib/tourContext";
 
 export default function KayitPage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function KayitPage() {
         email: fd.get("email"),
         password: fd.get("password"),
         companyName: fd.get("companyName"),
+        currentTourId: getCurrentTourId(),
       }),
     });
     const data = await res.json();

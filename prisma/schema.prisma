@@ -14,8 +14,16 @@ model User {
   name           String
   companyName    String?
   plan           String   @default("basic") // basic | premium
+  premiumExpiresAt DateTime? // premium subscription expiry (null = no premium or never expires)
   authProvider   String   @default("credentials") // credentials | google (future)
   googleSub      String?  @unique // future Google subject id
+  gender         String   @default("UNSPECIFIED") // MALE | FEMALE | UNSPECIFIED
+  themePreference String?  // null = automatic (based on gender), or: neutral | female | male
+  brightness     Int?     // brightness percentage (50-150), null = 100% default
+  // KVKK compliance
+  consentGiven      Boolean  @default(false)
+  consentTimestamp  DateTime?
+  consentTextVersion String? // Track which version of consent text was agreed to
   // Araç / sürücü profili (v1 stub — KAPSAM §13)
   vehicleMake       String?
   vehicleModel      String?
@@ -89,4 +97,101 @@ model Reservation {
   note        String    @default("")
   status      String    @default("beklemede") // beklemede | onayli | iptal
   createdAt   DateTime  @default(now())
+}
+
+model DeviceIdentity {
+  id                 String   @id @default(cuid())
+  deviceId           String   @unique // persistent random ID (localStorage + cookie)
+  fingerprintHash    String?  // lightweight browser fingerprint (fallback)
+  firstSeenAt        DateTime @default(now())
+  campaignStartedAt  DateTime? // 15-day campaign window start (DEPRECATED - use EmailIdentity)
+  campaignUsed       Boolean  @default(false) // DEPRECATED - use EmailIdentity
+  premiumExpiresAt   DateTime? // premium subscription expiry (DEPRECATED - use EmailIdentity)
+  trialCompletedAt   DateTime? // first-trip trial completion timestamp
+  linkedUserIds      String[] // users signed up from this device
+  lastSeenAt         DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([fingerprintHash])
+}
+
+model EmailIdentity {
+  id                 String   @id @default(cuid())
+  emailNormalized    String   @unique // trim().toLowerCase()
+  firstRegisteredAt  DateTime @default(now())
+  campaignStartedAt  DateTime @default(now()) // 15-day window per email
+  campaignUsed       Boolean  @default(false)
+  premiumExpiresAt   DateTime? // premium subscription expiry per email
+  linkedUserIds      String[] // users with this email (survives deletion/recreation)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model EmailVerificationCode {
+  id        String   @id @default(cuid())
+  email     String   // not normalized for display
+  code      String   // 6-digit code
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, code])
+  @@index([expiresAt])
+}
+
+model AdminAccessLog {
+  id          String   @id @default(cuid())
+  adminEmail  String   // who accessed
+  ipTruncated String   // IP with last octet removed (e.g. "192.168.1.x")
+  action      String   // what was done (viewed_dashboard, deleted_user_data, etc.)
+  targetId    String?  // ID of affected record (userId, deviceId, emailIdentity)
+  details     String?  // additional context
+  createdAt   DateTime @default(now())
+
+  @@index([adminEmail])
+  @@index([createdAt])
+}
+
+model PaymentRecord {
+  id                String   @id @default(cuid())
+  emailNormalized   String   // linked to EmailIdentity
+  deviceId          String?  // linked to DeviceIdentity
+  amount            Float    // amount paid (360 or 600)
+  currency          String   @default("TRY")
+  wasTest           Boolean  @default(true) // test payment or real
+  wasCampaign       Boolean  // whether campaign price was used
+  createdAt         DateTime @default(now())
+
+  @@index([emailNormalized])
+  @@index([deviceId])
+}
+
+model Ad {
+  id            String    @id @default(cuid())
+  title         String    // e.g. "Kapadokya balon turu"
+  text          String    // short banner text
+  imageUrl      String    // image path or URL
+  detailContent String    @default("") // full ad content for detail page
+  clickUrl      String?   // optional click-through URL (external or internal)
+  targetGender  String    @default("ALL") // ALL | MALE | FEMALE
+  active        Boolean   @default(true)
+  startDate     DateTime? // campaign start (null = no start limit)
+  endDate       DateTime? // campaign end (null = no end limit)
+  sortOrder     Int       @default(0) // display priority
+  impressions   Int       @default(0) // aggregate counter
+  clicks        Int       @default(0) // aggregate counter
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([active, startDate, endDate])
+  @@index([targetGender])
+}
+
+model AdSettings {
+  id               String   @id @default("default")
+  rotationInterval Int      @default(5) // seconds
+  rotationMode     String   @default("sıralı") // sıralı | rastgele
+  updatedAt        DateTime @updatedAt
 }

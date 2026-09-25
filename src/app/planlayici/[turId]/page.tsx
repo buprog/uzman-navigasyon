@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "@/components/MapView";
 import { BottomSheet } from "@/components/BottomSheet";
@@ -17,6 +17,12 @@ import {
   formatDuration,
   mockTireServiceOffers,
 } from "@/lib/driverAssistStubs";
+import { checkTrialResetParam, isTrialActive, syncTrialStatusFromServer } from "@/lib/trial";
+import { TrialEndNotification } from "@/components/TrialEndNotification";
+import { RouteWeatherStrip, RouteWeatherStripSkeleton } from "@/components/RouteWeatherStrip";
+import { useRouteWeather } from "@/hooks/useRouteWeather";
+import { sampleRoutePoints } from "@/lib/routeWeather";
+import { setCurrentTourId } from "@/lib/tourContext";
 
 type Stop = {
   id: string;
@@ -63,9 +69,11 @@ const TYPES = [
 export default function PlanlayiciPage() {
   const { turId } = useParams<{ turId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tour, setTour] = useState<Tour | null>(null);
   const [vehicle, setVehicle] = useState<VehicleProfile | null>(null);
   const [userPlan, setUserPlan] = useState<string>("basic");
+  const [trialActive, setTrialActive] = useState(true);
   const [activeDay, setActiveDay] = useState(0);
   const [selected, setSelected] = useState<Stop | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -78,7 +86,19 @@ export default function PlanlayiciPage() {
   const mobileToolbarRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   
+  // Track this tour as current for register/login transfer
+  useEffect(() => {
+    if (turId) {
+      setCurrentTourId(turId);
+    }
+  }, [turId]);
+  
+  // Detect if in preview mode for mock weather
+  const useMockWeather = searchParams.get('previewRouteWeather') === 'mock' || 
+                         searchParams.get('previewTheme') !== null;
+  
   const isPremium = userPlan === "premium";
+  const premiumUnlocked = isPremium || trialActive;
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/tours/${turId}`);
@@ -106,6 +126,18 @@ export default function PlanlayiciPage() {
   }, [load]);
 
   useEffect(() => {
+    // Check for trial reset param
+    // Check trial reset param (async server check)
+    void checkTrialResetParam();
+    
+    // Sync trial state from server
+    syncTrialStatusFromServer().then(() => {
+      setTrialActive(isTrialActive());
+    });
+    
+    // Load trial state immediately (will be updated if server differs)
+    setTrialActive(isTrialActive());
+    
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -157,6 +189,31 @@ export default function PlanlayiciPage() {
       }),
     [vehicle]
   );
+
+  // Calculate route weather points for the current day
+  const weatherPoints = useMemo(() => {
+    if (activeStopsForCost.length < 2) return null;
+
+    const distanceKm = routeDistanceKm(activeStopsForCost);
+    if (distanceKm <= 0) return null;
+
+    // Estimate duration (assume 60 km/h average)
+    const durationSec = Math.max(600, distanceKm * 60);
+
+    // Build polyline from stops (straight line approximation)
+    const polyline = activeStopsForCost.map(s => [s.lat, s.lng] as [number, number]);
+
+    return sampleRoutePoints(
+      polyline,
+      distanceKm,
+      durationSec,
+      new Date(),
+      activeStopsForCost
+    );
+  }, [activeStopsForCost]);
+
+  // Fetch weather data
+  const { weatherPoints: routeWeather, loading: weatherLoading, retry: retryWeather } = useRouteWeather(weatherPoints, { useMock: useMockWeather });
 
   async function saveTourMeta(patch: Partial<Tour>) {
     if (!tour) return;
@@ -391,26 +448,52 @@ export default function PlanlayiciPage() {
         )}
       </div>
 
+      {/* Route weather */}
+      {activeStopsForCost.length >= 2 && (
+        <div className="border-b border-slate-100 p-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+            Rota Hava Durumu
+          </h3>
+          {weatherLoading && <RouteWeatherStripSkeleton />}
+          {!weatherLoading && routeWeather && routeWeather.length > 0 && (
+            <RouteWeatherStrip points={routeWeather} onRetry={retryWeather} />
+          )}
+          {!weatherLoading && (!routeWeather || routeWeather.length === 0) && (
+            <p className="text-xs text-slate-500">
+              Hava durumu bilgisi alınamadı.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Premium features */}
       <div className="border-b border-slate-100 p-3">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           Arama özellikleri
         </h3>
+        {trialActive && !isPremium && (
+          <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 px-2 py-1.5">
+            <p className="text-[10px] text-blue-800">
+              ✨ <strong>Deneme:</strong> İlk varışa kadar tüm özellikler açık
+            </p>
+          </div>
+        )}
         <ul className="mt-2 space-y-2">
-          <li className={`rounded-lg border p-2 text-xs ${isPremium ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-slate-50 opacity-60"}`}>
+          <li className={`rounded-lg border p-2 text-xs ${premiumUnlocked ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-slate-50 opacity-60"}`}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
-                {!isPremium && <span className="text-slate-400">🔒</span>}
-                <span className={isPremium ? "font-medium text-teal-900" : "text-slate-600"}>
+                {!premiumUnlocked && <span className="text-slate-400">🔒</span>}
+                <span className={premiumUnlocked ? "font-medium text-teal-900" : "text-slate-600"}>
                   Otomobil servislerini bulma
                 </span>
               </div>
               {isPremium && <span className="badge-premium !text-[9px] !px-1.5 !py-0.5">Premium</span>}
+              {trialActive && !isPremium && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-800">Deneme</span>}
             </div>
             <p className="mt-1 text-[10px] text-slate-500">
               Rota üzerindeki servisleri haritada görüntüle
             </p>
-            {!isPremium && (
+            {!premiumUnlocked && (
               <button
                 onClick={() => router.push("/auth")}
                 className="mt-2 w-full rounded bg-slate-700 px-2 py-1 text-[10px] font-medium text-white hover:bg-slate-800 transition"
@@ -420,20 +503,21 @@ export default function PlanlayiciPage() {
             )}
           </li>
           
-          <li className={`rounded-lg border p-2 text-xs ${isPremium ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-slate-50 opacity-60"}`}>
+          <li className={`rounded-lg border p-2 text-xs ${premiumUnlocked ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-slate-50 opacity-60"}`}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
-                {!isPremium && <span className="text-slate-400">🔒</span>}
-                <span className={isPremium ? "font-medium text-teal-900" : "text-slate-600"}>
+                {!premiumUnlocked && <span className="text-slate-400">🔒</span>}
+                <span className={premiumUnlocked ? "font-medium text-teal-900" : "text-slate-600"}>
                   Otel bulma
                 </span>
               </div>
               {isPremium && <span className="badge-premium !text-[9px] !px-1.5 !py-0.5">Premium</span>}
+              {trialActive && !isPremium && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-800">Deneme</span>}
             </div>
             <p className="mt-1 text-[10px] text-slate-500">
               Güzergâh yakınındaki otelleri ara ve ekle
             </p>
-            {!isPremium && (
+            {!premiumUnlocked && (
               <button
                 onClick={() => router.push("/auth")}
                 className="mt-2 w-full rounded bg-slate-700 px-2 py-1 text-[10px] font-medium text-white hover:bg-slate-800 transition"
@@ -443,20 +527,21 @@ export default function PlanlayiciPage() {
             )}
           </li>
           
-          <li className={`rounded-lg border p-2 text-xs ${isPremium ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-slate-50 opacity-60"}`}>
+          <li className={`rounded-lg border p-2 text-xs ${premiumUnlocked ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-slate-50 opacity-60"}`}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
-                {!isPremium && <span className="text-slate-400">🔒</span>}
-                <span className={isPremium ? "font-medium text-teal-900" : "text-slate-600"}>
+                {!premiumUnlocked && <span className="text-slate-400">🔒</span>}
+                <span className={premiumUnlocked ? "font-medium text-teal-900" : "text-slate-600"}>
                   Restoran bulma
                 </span>
               </div>
               {isPremium && <span className="badge-premium !text-[9px] !px-1.5 !py-0.5">Premium</span>}
+              {trialActive && !isPremium && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-800">Deneme</span>}
             </div>
             <p className="mt-1 text-[10px] text-slate-500">
               Yol üzerindeki restoranları keşfet
             </p>
-            {!isPremium && (
+            {!premiumUnlocked && (
               <button
                 onClick={() => router.push("/auth")}
                 className="mt-2 w-full rounded bg-slate-700 px-2 py-1 text-[10px] font-medium text-white hover:bg-slate-800 transition"
@@ -466,20 +551,21 @@ export default function PlanlayiciPage() {
             )}
           </li>
           
-          <li className={`rounded-lg border p-2 text-xs ${isPremium ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-slate-50 opacity-60"}`}>
+          <li className={`rounded-lg border p-2 text-xs ${premiumUnlocked ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-slate-50 opacity-60"}`}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
-                {!isPremium && <span className="text-slate-400">🔒</span>}
-                <span className={isPremium ? "font-medium text-teal-900" : "text-slate-600"}>
+                {!premiumUnlocked && <span className="text-slate-400">🔒</span>}
+                <span className={premiumUnlocked ? "font-medium text-teal-900" : "text-slate-600"}>
                   Çevredeki aktiviteleri bulma
                 </span>
               </div>
               {isPremium && <span className="badge-premium !text-[9px] !px-1.5 !py-0.5">Premium</span>}
+              {trialActive && !isPremium && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-800">Deneme</span>}
             </div>
             <p className="mt-1 text-[10px] text-slate-500">
               Rotanıza yakın turistik aktiviteler
             </p>
-            {!isPremium && (
+            {!premiumUnlocked && (
               <button
                 onClick={() => router.push("/auth")}
                 className="mt-2 w-full rounded bg-slate-700 px-2 py-1 text-[10px] font-medium text-white hover:bg-slate-800 transition"
@@ -906,6 +992,9 @@ export default function PlanlayiciPage() {
           </form>
         </div>
       )}
+      
+      {/* Trial end notification - shown once */}
+      <TrialEndNotification />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { MapStop } from "./MapView";
@@ -14,19 +14,27 @@ import {
   type NavigationRoute,
   type NavigationStep,
 } from "@/lib/navigation";
+import { RouteWeatherStrip, RouteWeatherStripSkeleton } from "./RouteWeatherStrip";
+import { useRouteWeather } from "@/hooks/useRouteWeather";
+import { sampleRoutePoints, calculateForecastDays } from "@/lib/routeWeather";
+import { completeTrialServerSide } from "@/lib/trial";
 
 type Props = {
   stops: MapStop[];
   onExit: () => void;
+  onFirstArrival?: () => void;
+  useMockWeather?: boolean;
 };
 
-export function NavigationView({ stops, onExit }: Props) {
+export function NavigationView({ stops, onExit, onFirstArrival, useMockWeather = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const lastSpokenStepRef = useRef<number>(-1);
   const rerouteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const firstArrivalTriggeredRef = useRef<boolean>(false);
+  const startedAtStop0Ref = useRef<boolean | null>(null);
 
   const [mapReady, setMapReady] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<[number, number] | null>(null);
@@ -43,6 +51,28 @@ export function NavigationView({ stops, onExit }: Props) {
 
   const currentStop = stops[currentStopIndex];
   const nextStop = stops[currentStopIndex + 1];
+
+  // Calculate route weather points
+  const weatherPoints = useMemo(() => {
+    if (!route || !currentLocation) return null;
+
+    const totalDistanceKm = route.totalDistance / 1000;
+    const totalDurationSec = Math.max(
+      600, // minimum 10 min
+      totalDistanceKm * 60 // assume 60 km/h average
+    );
+
+    return sampleRoutePoints(
+      route.coordinates.map(([lng, lat]) => [lat, lng]),
+      totalDistanceKm,
+      totalDurationSec,
+      new Date(),
+      stops.map(s => ({ name: s.name, lat: s.lat, lng: s.lng }))
+    );
+  }, [route, currentLocation, stops]);
+
+  // Fetch weather data
+  const { weatherPoints: routeWeather, loading: weatherLoading, error: weatherError, retry: retryWeather } = useRouteWeather(weatherPoints, { useMock: useMockWeather });
 
   const requestLocationPermission = useCallback(async () => {
     if (!navigator.geolocation) {
@@ -259,6 +289,14 @@ export function NavigationView({ stops, onExit }: Props) {
     if (!currentLocation || !route || !nextStep) return;
 
     const [lng, lat] = currentLocation;
+    
+    // Check on first location update if user started at stop 0
+    if (startedAtStop0Ref.current === null && stops.length > 0) {
+      const firstStop = stops[0];
+      const distToFirstStop = haversineDistance(lat, lng, firstStop.lat, firstStop.lng);
+      startedAtStop0Ref.current = distToFirstStop < 30;
+    }
+    
     const [stepLng, stepLat] = nextStep.location;
     const distance = haversineDistance(lat, lng, stepLat, stepLng);
     setDistanceToNextStep(distance);
@@ -281,6 +319,21 @@ export function NavigationView({ stops, onExit }: Props) {
     }
 
     if (currentStop && haversineDistance(lat, lng, currentStop.lat, currentStop.lng) < 30) {
+      // Check if user started at stop 0 (only on first location update)
+      if (startedAtStop0Ref.current === null && currentStopIndex === 0) {
+        startedAtStop0Ref.current = true;
+      }
+      
+      // Trigger first arrival callback once
+      // Skip stop 0 only if user started there; otherwise count all stops
+      const shouldSkip = currentStopIndex === 0 && startedAtStop0Ref.current === true;
+      if (!firstArrivalTriggeredRef.current && onFirstArrival && !shouldSkip) {
+        firstArrivalTriggeredRef.current = true;
+        // Persist trial completion server-side
+        void completeTrialServerSide();
+        onFirstArrival();
+      }
+      
       if (currentStopIndex < stops.length - 1) {
         setCurrentStopIndex(currentStopIndex + 1);
         void calculateRoute(currentLocation, currentStopIndex + 1);
@@ -352,10 +405,10 @@ export function NavigationView({ stops, onExit }: Props) {
 
   if (!permissionGranted) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-slate-50 p-6">
-        <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-          <h2 className="text-xl font-bold text-slate-800">Konum İzni Gerekli</h2>
-          <p className="mt-3 text-sm text-slate-600">
+      <div className="flex h-[calc(100dvh-57px)] flex-col items-center justify-center bg-slate-50 [html[data-mode='night']_&]:bg-slate-900 p-6">
+        <div className="w-full max-w-md rounded-xl bg-white [html[data-mode='night']_&]:bg-slate-800 p-6 shadow-lg">
+          <h2 className="text-xl font-bold text-slate-800 [html[data-mode='night']_&]:text-slate-100">Konum İzni Gerekli</h2>
+          <p className="mt-3 text-sm text-slate-600 [html[data-mode='night']_&]:text-slate-300">
             Navigasyon için cihazınızın konumuna erişim gerekiyor. Konum izni vermek
             için aşağıdaki butona tıklayın.
           </p>
@@ -383,7 +436,7 @@ export function NavigationView({ stops, onExit }: Props) {
   }
 
   return (
-    <div className="relative flex h-screen flex-col">
+    <div className="relative flex h-[calc(100dvh-57px)] flex-col">
       <div ref={containerRef} className="flex-1" />
 
       {!mapReady && (
@@ -397,6 +450,12 @@ export function NavigationView({ stops, onExit }: Props) {
           <div className="mb-2 rounded-lg bg-red-500 p-3 text-center text-sm font-medium text-white shadow-lg">
             ⚠️ Rotadan çıktınız - Yeniden hesaplanıyor…
           </div>
+        )}
+
+        {/* Route weather strip */}
+        {weatherLoading && <RouteWeatherStripSkeleton />}
+        {!weatherLoading && routeWeather && routeWeather.length > 0 && (
+          <RouteWeatherStrip points={routeWeather} onRetry={retryWeather} />
         )}
 
         {nextStep && (

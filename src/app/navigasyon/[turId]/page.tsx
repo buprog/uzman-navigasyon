@@ -1,9 +1,12 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { NavigationView } from "@/components/NavigationView";
+import { PaymentModal } from "@/components/PaymentModal";
 import type { MapStop } from "@/components/MapView";
+import { isTrialActive, checkTrialResetParam, syncTrialStatusFromServer } from "@/lib/trial";
+import { setCurrentTourId } from "@/lib/tourContext";
 
 type Stop = {
   id: string;
@@ -32,9 +35,24 @@ type Tour = {
 export default function NavigasyonPage() {
   const { turId } = useParams<{ turId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tour, setTour] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [userPlan, setUserPlan] = useState<string>("basic");
+  const [trialActive, setTrialActive] = useState(true);
+
+  // Track this tour as current for register/login transfer
+  useEffect(() => {
+    if (turId) {
+      setCurrentTourId(turId);
+    }
+  }, [turId]);
+
+  // Detect if in preview mode for mock weather
+  const useMockWeather = searchParams.get('previewRouteWeather') === 'mock' || 
+                         searchParams.get('previewTheme') !== null;
 
   const load = useCallback(async () => {
     try {
@@ -68,15 +86,51 @@ export default function NavigasyonPage() {
 
   useEffect(() => {
     load();
+    
+    // Check trial reset param (async server check)
+    void checkTrialResetParam();
+    
+    // Sync trial state from server
+    syncTrialStatusFromServer().then(() => {
+      setTrialActive(isTrialActive());
+    });
+    
+    // Load trial state immediately (will be updated if server differs)
+    setTrialActive(isTrialActive());
+    
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.user) setUserPlan(d.user.plan || "basic");
+      })
+      .catch(() => {});
   }, [load]);
 
   const handleExit = () => {
     router.push(`/planlayici/${turId}`);
   };
+  
+  const handleFirstArrival = () => {
+    // Only show payment modal if trial is active and user is not premium
+    if (trialActive && userPlan !== "premium") {
+      setShowPaymentModal(true);
+    }
+  };
+  
+  const handlePaymentComplete = () => {
+    setShowPaymentModal(false);
+    setUserPlan("premium");
+    setTrialActive(false);
+  };
+  
+  const handlePaymentClose = () => {
+    setShowPaymentModal(false);
+    setTrialActive(false);
+  };
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="flex h-[calc(100dvh-57px)] items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="mb-4 text-4xl">🗺️</div>
           <p className="text-sm text-slate-500">Navigasyon hazırlanıyor…</p>
@@ -87,7 +141,7 @@ export default function NavigasyonPage() {
 
   if (error || !tour) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 p-6">
+      <div className="flex h-[calc(100dvh-57px)] items-center justify-center bg-slate-50 p-6">
         <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
           <h2 className="text-xl font-bold text-red-600">Hata</h2>
           <p className="mt-3 text-sm text-slate-600">
@@ -119,7 +173,7 @@ export default function NavigasyonPage() {
 
   if (activeStops.length < 2) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 p-6">
+      <div className="flex h-[calc(100dvh-57px)] items-center justify-center bg-slate-50 p-6">
         <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
           <h2 className="text-xl font-bold text-amber-600">Yetersiz Durak</h2>
           <p className="mt-3 text-sm text-slate-600">
@@ -137,5 +191,20 @@ export default function NavigasyonPage() {
     );
   }
 
-  return <NavigationView stops={activeStops} onExit={handleExit} />;
+  return (
+    <>
+      <NavigationView 
+        stops={activeStops} 
+        onExit={handleExit}
+        onFirstArrival={handleFirstArrival}
+        useMockWeather={useMockWeather}
+      />
+      {showPaymentModal && (
+        <PaymentModal
+          onClose={handlePaymentClose}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      )}
+    </>
+  );
 }

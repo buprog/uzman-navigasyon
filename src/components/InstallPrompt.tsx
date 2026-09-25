@@ -24,13 +24,16 @@ export function InstallPrompt() {
       return;
     }
 
-    const timer = setTimeout(() => {
-      setShowIOSInstructions(true);
-    }, 3000);
+    // Detect iOS Safari (not Chrome/Firefox on iOS)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isIOSSafari = isIOS && isSafari;
+
+    let timer: NodeJS.Timeout | null = null;
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setShowInstallButton(true);
       setShowIOSInstructions(false);
@@ -38,11 +41,21 @@ export function InstallPrompt() {
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
+    // Only show iOS instructions on iOS Safari after 3 seconds if no beforeinstallprompt
+    if (isIOSSafari) {
+      timer = setTimeout(() => {
+        // Only show if beforeinstallprompt didn't fire
+        if (!deferredPrompt) {
+          setShowIOSInstructions(true);
+        }
+      }, 3000);
+    }
+
     return () => {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
-  }, []);
+  }, [deferredPrompt]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;

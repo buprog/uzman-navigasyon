@@ -1,0 +1,454 @@
+/* Gender-based themes using CSS custom properties */
+
+/* ===== NEUTRAL THEME (Default) ===== */
+:root,
+[data-theme="neutral"] {
+  /* Background colors */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8fafc;
+  --color-bg-tertiary: #f1f5f9;
+  
+  /* Surface colors */
+  --color-surface: #ffffff;
+  --color-surface-hover: #f8fafc;
+  --color-surface-active: #f1f5f9;
+  
+  /* Border colors */
+  --color-border: #e2e8f0;
+  --color-border-hover: #cbd5e1;
+  
+  /* Text colors */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #64748b;
+  
+  /* Accent colors */
+  --color-accent: #0f766e;
+  --color-accent-hover: #0d9488;
+  --color-accent-light: #ccfbf1;
+  
+  /* Button colors */
+  --color-btn-primary-bg: #0f766e;
+  --color-btn-primary-hover: #0d9488;
+  --color-btn-primary-text: #ffffff;
+  --color-btn-secondary-bg: #f1f5f9;
+  --color-btn-secondary-hover: #e2e8f0;
+  --color-btn-secondary-text: #475569;
+  
+  /* Status colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+  
+  /* Emergency button (always red) */
+  --color-emergency: #dc2626;
+  --color-emergency-hover: #b91c1c;
+  
+  /* Border radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+/* ===== FEMALE THEME (Warm Pastels) ===== */
+[data-theme="female"] {
+  /* Background colors - warm, soft */
+  --color-bg-primary: #fff9f5;
+  --color-bg-secondary: #ffe9e0;
+  --color-bg-tertiary: #ffd6c9;
+  
+  /* Surface colors */
+  --color-surface: #fff9f5;
+  --color-surface-hover: #ffe9e0;
+  --color-surface-active: #ffd6c9;
+  
+  /* Border colors */
+  --color-border: #f4c2b3;
+  --color-border-hover: #e6a598;
+  
+  /* Text colors */
+  --color-text-primary: #4a2c2a;
+  --color-text-secondary: #6b4a47;
+  --color-text-tertiary: #8a6864;
+  
+  /* Accent colors - blush/peach/lavender */
+  --color-accent: #d4698c;
+  --color-accent-hover: #e07fa1;
+  --color-accent-light: #f8d7e8;
+  
+  /* Button colors */
+  --color-btn-primary-bg: #d4698c;
+  --color-btn-primary-hover: #e07fa1;
+  --color-btn-primary-text: #ffffff;
+  --color-btn-secondary-bg: #ffe9e0;
+  --color-btn-secondary-hover: #ffd6c9;
+  --color-btn-secondary-text: #6b4a47;
+  
+  /* Status colors */
+  --color-success: #86c587;
+  --color-warning: #f4a460;
+  --color-error: #e57373;
+  --color-info: #9fa8da;
+  
+  /* Emergency button (always red) */
+  --color-emergency: #dc2626;
+  --color-emergency-hover: #b91c1c;
+  
+  /* Border radius - softer, more rounded */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  
+  /* Shadows - softer */
+  --shadow-sm: 0 2px 4px 0 rgb(212 105 140 / 0.08);
+  --shadow-md: 0 4px 8px -1px rgb(212 105 140 / 0.12);
+  --shadow-lg: 0 10px 20px -3px rgb(212 105 140 / 0.15);
+}
+
+/* ===== MALE THEME (Dark & Sharp) ===== */
+[data-theme="male"] {
+  /* Background colors - darker */
+  --color-bg-primary: #1a1f2e;
+  --color-bg-secondary: #252b3d;
+  --color-bg-tertiary: #2f3648;
+  
+  /* Surface colors */
+  --color-surface: #252b3d;
+  --color-surface-hover: #2f3648;
+  --color-surface-active: #3a4153;
+  
+  /* Border colors */
+  --color-border: #3a4153;
+  --color-border-hover: #4a5268;
+  
+  /* Text colors - high contrast */
+  --color-text-primary: #e8eaed;
+  --color-text-secondary: #b8bcc5;
+  --color-text-tertiary: #8a8f9d;
+  
+  /* Accent colors - steel blue/orange */
+  --color-accent: #3d8bfd;
+  --color-accent-hover: #5a9fff;
+  --color-accent-light: #1e3a5f;
+  
+  /* Button colors */
+  --color-btn-primary-bg: #3d8bfd;
+  --color-btn-primary-hover: #5a9fff;
+  --color-btn-primary-text: #ffffff;
+  --color-btn-secondary-bg: #2f3648;
+  --color-btn-secondary-hover: #3a4153;
+  --color-btn-secondary-text: #b8bcc5;
+  
+  /* Status colors */
+  --color-success: #4ade80;
+  --color-warning: #fb923c;
+  --color-error: #f87171;
+  --color-info: #60a5fa;
+  
+  /* Emergency button (always red) */
+  --color-emergency: #dc2626;
+  --color-emergency-hover: #b91c1c;
+  
+  /* Border radius - sharper */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  
+  /* Shadows - sharper */
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 8px -1px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 20px -3px rgb(0 0 0 / 0.5);
+}
+
+/* Apply theme colors to body and main containers */
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Update main text colors */
+.text-slate-900 { color: var(--color-text-primary) !important; }
+.text-slate-700 { color: var(--color-text-secondary) !important; }
+.text-slate-600 { color: var(--color-text-tertiary) !important; }
+.text-slate-500 { color: var(--color-text-tertiary) !important; }
+
+/* Update backgrounds */
+.bg-white { background-color: var(--color-surface) !important; }
+.bg-slate-50 { background-color: var(--color-bg-secondary) !important; }
+.bg-slate-100 { background-color: var(--color-bg-tertiary) !important; }
+
+/* Update borders */
+.border-slate-200 { border-color: var(--color-border) !important; }
+.border-slate-300 { border-color: var(--color-border-hover) !important; }
+
+/* Update teal/accent colors */
+.bg-teal-700 { background-color: var(--color-accent) !important; }
+.bg-teal-600 { background-color: var(--color-accent-hover) !important; }
+.text-teal-700 { color: var(--color-accent-text, var(--color-accent)) !important; }
+.text-teal-800 { color: var(--color-accent-text, var(--color-accent)) !important; }
+.text-teal-900 { color: var(--color-accent-text, var(--color-accent)) !important; }
+.border-teal-700 { border-color: var(--color-accent) !important; }
+.border-teal-600 { border-color: var(--color-accent-hover) !important; }
+
+/* Hover states */
+.hover\:bg-teal-800:hover { background-color: var(--color-accent-hover) !important; }
+.hover\:bg-slate-100:hover { background-color: var(--color-bg-tertiary) !important; }
+.hover\:bg-slate-200:hover { background-color: var(--color-border) !important; }
+
+/* Button styles */
+.btn-primary {
+  background-color: var(--color-btn-primary-bg) !important;
+  color: var(--color-btn-primary-text) !important;
+  border-radius: var(--radius-md);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-btn-primary-hover) !important;
+}
+
+.btn-secondary {
+  background-color: var(--color-btn-secondary-bg) !important;
+  color: var(--color-btn-secondary-text) !important;
+  border-radius: var(--radius-md);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-btn-secondary-hover) !important;
+}
+
+/* Emergency button - ALWAYS RED */
+.btn-emergency,
+button[aria-label*="112"],
+button[aria-label*="Acil"],
+.emergency-button {
+  background-color: var(--color-emergency) !important;
+  color: white !important;
+}
+
+.btn-emergency:hover,
+button[aria-label*="112"]:hover,
+button[aria-label*="Acil"]:hover,
+.emergency-button:hover {
+  background-color: var(--color-emergency-hover) !important;
+}
+
+/* Rounded corners everywhere */
+.rounded { border-radius: var(--radius-sm) !important; }
+.rounded-md { border-radius: var(--radius-md) !important; }
+.rounded-lg { border-radius: var(--radius-lg) !important; }
+.rounded-xl { border-radius: var(--radius-xl) !important; }
+
+/* Shadows */
+.shadow-sm { box-shadow: var(--shadow-sm) !important; }
+.shadow-md { box-shadow: var(--shadow-md) !important; }
+.shadow-lg { box-shadow: var(--shadow-lg) !important; }
+.shadow-2xl { box-shadow: var(--shadow-lg) !important; }
+
+/* Input styles */
+.input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+input[type="number"],
+input[type="datetime-local"],
+textarea,
+select {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+  border-radius: var(--radius-md);
+}
+
+.input:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-accent) !important;
+  outline: 2px solid var(--color-accent-light) !important;
+  outline-offset: 0;
+}
+
+/* Card/panel styles */
+.card,
+.panel {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Badge styles */
+.badge-premium {
+  background-color: var(--color-accent-light);
+  color: var(--color-accent);
+  border-radius: var(--radius-sm);
+}
+
+/* Lock icon styling */
+.lock-icon {
+  color: var(--color-text-tertiary);
+}
+
+/* Ensure map readability - no theme on map container */
+#map-container,
+.map-container,
+.leaflet-container {
+  background-color: #ffffff !important;
+}
+
+/* Ensure WCAG AA contrast for all text */
+[data-theme="male"] {
+  --min-contrast-ratio: 4.5;
+}
+
+/* ===== NIGHT MODE VARIANTS ===== */
+/* Night mode uses darker palettes automatically based on sunrise/sunset */
+
+/* NEUTRAL NIGHT */
+[data-theme="neutral"][data-mode="night"] {
+  --color-bg-primary: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-bg-tertiary: #334155;
+  
+  --color-surface: #1e293b;
+  --color-surface-hover: #334155;
+  --color-surface-active: #475569;
+  
+  --color-border: #475569;
+  --color-border-hover: #64748b;
+  
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-tertiary: #94a3b8;
+  
+  --color-accent: #0f766e;
+  --color-accent-hover: #115e59;
+  --color-accent-light: #0f766e;
+  --color-accent-text: #2dd4bf;
+  
+  --color-btn-primary-bg: #0f766e;
+  --color-btn-primary-hover: #115e59;
+  --color-btn-primary-text: #ffffff;
+  --color-btn-secondary-bg: #334155;
+  --color-btn-secondary-hover: #475569;
+  --color-btn-secondary-text: #cbd5e1;
+}
+
+/* FEMALE NIGHT (Deep plum/mauve with soft pastel accents) */
+[data-theme="female"][data-mode="night"] {
+  --color-bg-primary: #2d1b2e;
+  --color-bg-secondary: #3d2940;
+  --color-bg-tertiary: #4d3750;
+  
+  --color-surface: #3d2940;
+  --color-surface-hover: #4d3750;
+  --color-surface-active: #5d4560;
+  
+  --color-border: #6d5570;
+  --color-border-hover: #7d6580;
+  
+  --color-text-primary: #f5e6f0;
+  --color-text-secondary: #d4a8ce;
+  --color-text-tertiary: #b48aae;
+  
+  --color-accent: #b4447f;
+  --color-accent-hover: #9a3a6b;
+  --color-accent-light: #6d3055;
+  --color-accent-text: #f0a8d3;
+  
+  --color-btn-primary-bg: #b4447f;
+  --color-btn-primary-hover: #9a3a6b;
+  --color-btn-primary-text: #ffffff;
+  --color-btn-secondary-bg: #4d3750;
+  --color-btn-secondary-hover: #5d4560;
+  --color-btn-secondary-text: #d4a8ce;
+  
+  /* Keep soft rounded corners */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  
+  --shadow-sm: 0 2px 4px 0 rgb(180 68 127 / 0.12);
+  --shadow-md: 0 4px 8px -1px rgb(180 68 127 / 0.16);
+  --shadow-lg: 0 10px 20px -3px rgb(180 68 127 / 0.20);
+}
+
+/* MALE NIGHT (Near-black surfaces, ultra high contrast) */
+[data-theme="male"][data-mode="night"] {
+  --color-bg-primary: #050810;
+  --color-bg-secondary: #0d1220;
+  --color-bg-tertiary: #151d30;
+  
+  --color-surface: #0d1220;
+  --color-surface-hover: #151d30;
+  --color-surface-active: #1d2740;
+  
+  --color-border: #1d2740;
+  --color-border-hover: #2d3750;
+  
+  --color-text-primary: #f0f4f8;
+  --color-text-secondary: #d0d8e0;
+  --color-text-tertiary: #a0acb8;
+  
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-light: #1e3a5f;
+  --color-accent-text: #78b1ff;
+  
+  --color-btn-primary-bg: #2563eb;
+  --color-btn-primary-hover: #1d4ed8;
+  --color-btn-primary-text: #ffffff;
+  --color-btn-secondary-bg: #151d30;
+  --color-btn-secondary-hover: #1d2740;
+  --color-btn-secondary-text: #d0d8e0;
+  
+  /* Keep sharp corners */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.5);
+  --shadow-md: 0 4px 8px -1px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 10px 20px -3px rgb(0 0 0 / 0.7);
+}
+
+/* Color scheme meta */
+:root {
+  color-scheme: light;
+}
+
+[data-mode="night"] {
+  color-scheme: dark;
+}
+
+/* Animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out;
+}
+

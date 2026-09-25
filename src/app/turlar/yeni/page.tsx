@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { UpgradeBanner } from "@/components/PlanBadge";
 import { PlaceSearch, type PlaceValue } from "@/components/PlaceSearch";
 import { computeDayCount } from "@/lib/dayCount";
+import { setCurrentTourId } from "@/lib/tourContext";
 
 export default function YeniTurPage() {
   const router = useRouter();
@@ -71,6 +72,8 @@ export default function YeniTurPage() {
       setUpgrade(!!data.upgrade);
       return;
     }
+    // Track this tour for potential transfer on register/login
+    setCurrentTourId(data.tour.id);
     router.push(`/planlayici/${data.tour.id}`);
   }
 

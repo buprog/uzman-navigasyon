@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Gender-based themes */
+@import '../styles/themes.css';
+
 :root {
   --brand: #0f766e;
   --brand-dark: #115e59;
@@ -35,6 +38,167 @@ body {
 }
 .card {
   @apply rounded-xl border border-slate-200 bg-white p-5 shadow-sm;
+}
+
+/* Night mode: systematic dark theme */
+[data-mode="night"] body {
+  @apply bg-slate-900 text-slate-100;
+}
+
+[data-mode="night"] .card {
+  @apply bg-slate-800 border-slate-700;
+}
+
+/* Remap light backgrounds to dark */
+[data-mode="night"] .bg-white {
+  @apply bg-slate-800;
+}
+
+[data-mode="night"] .bg-slate-50 {
+  @apply bg-slate-900;
+}
+
+[data-mode="night"] .bg-slate-100 {
+  @apply bg-slate-800;
+}
+
+[data-mode="night"] .bg-gray-50 {
+  @apply bg-slate-900;
+}
+
+[data-mode="night"] .bg-gray-100 {
+  @apply bg-slate-800;
+}
+
+/* Remap lighter gray backgrounds */
+[data-mode="night"] .bg-slate-200 {
+  @apply bg-slate-700;
+}
+
+[data-mode="night"] .bg-slate-300 {
+  @apply bg-slate-700;
+}
+
+[data-mode="night"] .bg-gray-200 {
+  @apply bg-slate-700;
+}
+
+[data-mode="night"] .bg-gray-300 {
+  @apply bg-slate-700;
+}
+
+/* Remap white with opacity variants */
+[data-mode="night"] .bg-white\/95 {
+  @apply bg-slate-800/95;
+}
+
+[data-mode="night"] .bg-white\/90 {
+  @apply bg-slate-800/90;
+}
+
+[data-mode="night"] .bg-white\/80 {
+  @apply bg-slate-800/80;
+}
+
+[data-mode="night"] .bg-white\/70 {
+  @apply bg-slate-800/70;
+}
+
+[data-mode="night"] .bg-white\/50 {
+  @apply bg-slate-700/50;
+}
+
+/* Remap dark text to light */
+[data-mode="night"] .text-slate-900 {
+  @apply text-slate-100;
+}
+
+[data-mode="night"] .text-slate-800 {
+  @apply text-slate-200;
+}
+
+[data-mode="night"] .text-slate-700 {
+  @apply text-slate-300;
+}
+
+[data-mode="night"] .text-slate-600 {
+  @apply text-slate-300;
+}
+
+[data-mode="night"] .text-slate-500 {
+  @apply text-slate-300;
+}
+
+[data-mode="night"] .text-gray-900 {
+  @apply text-slate-100;
+}
+
+[data-mode="night"] .text-gray-800 {
+  @apply text-slate-200;
+}
+
+[data-mode="night"] .text-gray-700 {
+  @apply text-slate-300;
+}
+
+[data-mode="night"] .text-gray-600 {
+  @apply text-slate-400;
+}
+
+[data-mode="night"] .text-black {
+  @apply text-slate-100;
+}
+
+/* Remap borders */
+[data-mode="night"] .border-slate-200 {
+  @apply border-slate-700;
+}
+
+[data-mode="night"] .border-slate-300 {
+  @apply border-slate-600;
+}
+
+[data-mode="night"] .border-gray-200 {
+  @apply border-slate-700;
+}
+
+[data-mode="night"] .border-gray-300 {
+  @apply border-slate-600;
+}
+
+/* Form elements */
+[data-mode="night"] .input {
+  @apply bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-400;
+}
+
+[data-mode="night"] .input:focus {
+  @apply border-teal-500 ring-teal-900;
+}
+
+[data-mode="night"] .label {
+  @apply text-slate-300;
+}
+
+[data-mode="night"] input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+[data-mode="night"] select,
+[data-mode="night"] textarea {
+  @apply bg-slate-800 text-slate-100 border-slate-600 placeholder-slate-400;
+}
+
+/* Range sliders need visible track in night mode */
+[data-mode="night"] input[type="range"] {
+  @apply accent-teal-600;
+}
+
+[data-mode="night"] input::placeholder,
+[data-mode="night"] select::placeholder,
+[data-mode="night"] textarea::placeholder {
+  @apply text-slate-400;
+}
+
+/* Secondary button in night mode */
+[data-mode="night"] .btn-secondary {
+  @apply bg-slate-700 border-slate-600 text-slate-100 hover:bg-slate-600;
 }
 .badge-basic {
   @apply inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600;

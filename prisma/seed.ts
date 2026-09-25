@@ -47,11 +47,25 @@ async function main() {
     },
   });
 
-  // Remove previous sample for idempotent seed
-  await prisma.tour.deleteMany({ where: { userId: user.id, isSample: true } });
-
-  const tour = await prisma.tour.create({
-    data: {
+  // Upsert sample tour by stable ID (idempotent, non-destructive)
+  // Use the existing sample tour ID to preserve it
+  const sampleTourId = "cmug065rz0002116zh16juh3l";
+  
+  const tour = await prisma.tour.upsert({
+    where: { id: sampleTourId },
+    update: {
+      name: "Kapadokya Keşif Turu",
+      description:
+        "3 günlük Kapadokya programı: Göreme, Uçhisar, Derinkuyu ve peri bacaları. Örnek seed turu.",
+      startName: "Nevşehir",
+      endName: "Göreme",
+      startDate: "2026-05-10",
+      endDate: "2026-05-12",
+      dayCount: 3,
+      isSample: true,
+    },
+    create: {
+      id: sampleTourId,
       userId: user.id,
       name: "Kapadokya Keşif Turu",
       description:
@@ -157,15 +171,87 @@ async function main() {
     },
   });
 
-  const departure = await prisma.departure.create({
-    data: {
+  // Upsert sample departure by shareCode (idempotent, non-destructive)
+  const sampleShareCode = "5d5e0rljyk"; // Fixed share code for sample tour
+  
+  const departure = await prisma.departure.upsert({
+    where: { shareCode: sampleShareCode },
+    update: {
       tourId: tour.id,
       date: "2026-05-10",
       capacity: 16,
       bookedCount: 0,
       status: "yayin",
-      shareCode: nanoid(),
       note: "Örnek yayınlı kalkış",
+    },
+    create: {
+      tourId: tour.id,
+      date: "2026-05-10",
+      capacity: 16,
+      bookedCount: 0,
+      status: "yayin",
+      shareCode: sampleShareCode,
+      note: "Örnek yayınlı kalkış",
+    },
+  });
+
+  // Idempotent placeholder ads
+  const placeholderAds = [
+    {
+      title: "Kapadokya Balon Turu",
+      text: "Gün doğumunda unutulmaz bir deneyim",
+      imageUrl: "/ads/balon.svg",
+      detailContent: "Kapadokya'nın eşsiz manzarasını sıcak hava balonuyla keşfedin. Gün doğumunda başlayan turumuz, peri bacaları üzerinde unutulmaz anlar yaşatır. Profesyonel pilotlar eşliğinde güvenli uçuş. Kahvaltı dahil.",
+      targetGender: "ALL",
+      sortOrder: 1,
+    },
+    {
+      title: "Karadeniz Yayla Rotası",
+      text: "Yeşilin her tonunu keşfedin",
+      imageUrl: "/ads/yayla.svg",
+      detailContent: "Karadeniz'in büyüleyici yaylalarını rehberli turlarımızla keşfedin. Ayder, Pokut, Şenyuva ve daha fazlası. Yerel rehberler eşliğinde doğa yürüyüşü, fotoğraf turları ve yayla kültürü deneyimi.",
+      targetGender: "ALL",
+      sortOrder: 2,
+    },
+    {
+      title: "Rehberli Müze Turu",
+      text: "Tarihi uzmanlardan dinleyin",
+      imageUrl: "/ads/muze.svg",
+      detailContent: "Türkiye'nin en önemli müzelerini uzman rehberler eşliğinde gezin. Topkapı Sarayı, Ayasofya, Efes Antik Kenti ve daha fazlası. Grup ve özel tur seçenekleri mevcut.",
+      targetGender: "ALL",
+      sortOrder: 3,
+    },
+    {
+      title: "Macera: Rafting Rotası",
+      text: "Adrenalin dolu bir gün sizi bekliyor",
+      imageUrl: "/ads/rafting.svg",
+      detailContent: "Köprülü Kanyon'da profesyonel ekipman ve deneyimli rehberlerle rafting macerası. Tüm güvenlik ekipmanı dahil. Başlangıç ve ileri seviye gruplar için uygun rotalar.",
+      targetGender: "ALL",
+      sortOrder: 4,
+    },
+  ];
+
+  for (const ad of placeholderAds) {
+    await prisma.ad.upsert({
+      where: { 
+        id: `placeholder-${ad.sortOrder}` // stable ID for idempotent seed
+      },
+      update: ad,
+      create: {
+        id: `placeholder-${ad.sortOrder}`,
+        ...ad,
+      },
+    });
+  }
+
+  // Default ad settings
+  await prisma.adSettings.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      rotationInterval: 5, // 5 seconds
+      rotationMode: "sıralı", // sequential by sort order
     },
   });
 
@@ -173,6 +259,7 @@ async function main() {
   console.log("  Demo user: operator@demo.com / demo1234 (Basic)");
   console.log("  Sample tour:", tour.name, tour.id);
   console.log("  Public link: /p/" + departure.shareCode);
+  console.log("  Placeholder ads:", placeholderAds.length);
 }
 
 main()

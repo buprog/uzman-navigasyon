@@ -2,6 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { AdBanner } from "@/components/AdBanner";
+import { DayNightDetector } from "@/components/DayNightDetector";
+import { getSessionUser } from "@/lib/auth";
+import { getServerTheme } from "@/lib/theme.server";
 
 export const metadata: Metadata = {
   title: "Uzman Navigasyon",
@@ -32,13 +36,112 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ 
+  children,
+  params,
+  searchParams,
+}: { 
+  children: React.ReactNode;
+  params?: any;
+  searchParams?: { previewTheme?: string; previewMode?: string; previewBrightness?: string };
+}) {
+  // Resolve theme server-side to prevent flash
+  const user = await getSessionUser();
+  const previewTheme = searchParams?.previewTheme;
+  const previewMode = searchParams?.previewMode;
+  const previewBrightness = searchParams?.previewBrightness;
+  
+  const theme = getServerTheme(
+    user ? {
+      gender: user.gender as "MALE" | "FEMALE" | "UNSPECIFIED",
+      themePreference: user.themePreference as "neutral" | "female" | "male" | null,
+    } : undefined,
+    previewTheme
+  );
+
+  // For preview mode, set explicit day/night
+  const explicitMode = previewMode === "day" || previewMode === "night" ? previewMode : undefined;
+  
+  // For preview mode, set explicit brightness
+  const explicitBrightness = previewBrightness ? parseInt(previewBrightness, 10) : undefined;
+
   return (
-    <html lang="tr">
+    <html 
+      lang="tr" 
+      data-theme={theme}
+      data-mode={explicitMode}
+    >
+      <head>
+        {/* Inline script for brightness and day/night mode - prevents flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  // Apply brightness first (before any rendering)
+                  ${explicitBrightness ? `
+                    const brightness = ${explicitBrightness};
+                  ` : `
+                    const userBrightness = ${user?.brightness || 'null'};
+                    const storedBrightness = localStorage.getItem('un_brightness');
+                    const brightness = userBrightness || (storedBrightness ? parseInt(storedBrightness, 10) : 100);
+                  `}
+                  
+                  if (brightness && brightness !== 100 && brightness >= 50 && brightness <= 150) {
+                    const decimal = brightness / 100;
+                    document.documentElement.style.setProperty('--app-brightness', decimal.toString());
+                    document.documentElement.style.setProperty('filter', 'brightness(' + decimal + ')');
+                  }
+                } catch (e) {}
+                
+                ${!explicitMode ? `
+                try {
+                  // Check cache first for today's sunrise/sunset
+                  const cached = localStorage.getItem('un_daynight_cache');
+                  const now = new Date();
+                  const today = now.toISOString().split('T')[0];
+                  
+                  if (cached) {
+                    try {
+                      const data = JSON.parse(cached);
+                      if (data.date === today) {
+                        // Use cached sunrise/sunset
+                        const sunrise = new Date(data.sunrise);
+                        const sunset = new Date(data.sunset);
+                        const time = now.getTime();
+                        const mode = time >= sunrise.getTime() && time < sunset.getTime() ? 'day' : 'night';
+                        document.documentElement.setAttribute('data-mode', mode);
+                        
+                        // Schedule re-check at next transition
+                        const nextCheck = mode === 'day' ? sunset : 
+                          (time < sunrise.getTime() ? sunrise : new Date(sunrise.getTime() + 24*60*60*1000));
+                        const delay = Math.max(1000, nextCheck.getTime() - time);
+                        setTimeout(() => location.reload(), delay);
+                        return;
+                      }
+                    } catch (e) {}
+                  }
+                  
+                  // Fallback: Use time-based 07:00-19:00 local
+                  const hours = now.getHours();
+                  const mode = hours >= 7 && hours < 19 ? 'day' : 'night';
+                  document.documentElement.setAttribute('data-mode', mode);
+                } catch (e) {
+                  // Ultimate fallback
+                  document.documentElement.setAttribute('data-mode', 'day');
+                }
+                ` : ''}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body>
+        <DayNightDetector />
         <Nav />
         <InstallPrompt />
         <main className="min-h-[calc(100vh-57px)]">{children}</main>
+        <AdBanner hideOnPages={["/navigasyon", "/planlayici", "/xconsole-internal"]} />
       </body>
     </html>
   );
