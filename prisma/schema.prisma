@@ -247,6 +247,7 @@ model FamilyPlan {
   inviteCode      String   @unique // format AILE-XXXXXX
   premiumUntil    DateTime
   status          String   // ACTIVE | CLOSED
+  closedAt        DateTime? // timestamp when bulk-close set status=CLOSED (null if never closed or currently ACTIVE)
   source          String   // code | admin | purchase
   discountCodeId  String?
   fullName        String?

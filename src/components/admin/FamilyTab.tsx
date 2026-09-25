@@ -158,7 +158,25 @@ export function FamilyTab() {
       });
       const data = await res.json();
       if (res.ok) {
-        setMessage("✅ Aileler yeniden açıldı");
+        let msg = `✅ ${data.reopened?.length || 0} aile açıldı`;
+        if (data.skipped && data.skipped.length > 0) {
+          const reasonMap: Record<string, string> = {
+            already_active: "zaten aktif",
+            owner_in_other_family: "yönetici başka aile üyesi",
+            in_other_family: "başka aile üyesi",
+            full: "dolu",
+          };
+          const skippedSummary = data.skipped
+            .map((s: { familyId: string; deviceIdShort?: string; reason: string }) => {
+              const id = s.familyId.substring(0, 8);
+              const device = s.deviceIdShort ? ` (${s.deviceIdShort})` : "";
+              const reason = reasonMap[s.reason] || s.reason;
+              return `${id}${device}: ${reason}`;
+            })
+            .join(", ");
+          msg += `\n⚠️ Atlandı (${data.skipped.length}): ${skippedSummary}`;
+        }
+        setMessage(msg);
         fetchFamilies();
         setSelectedIds(new Set());
       } else {
@@ -167,7 +185,7 @@ export function FamilyTab() {
     } catch {
       setMessage("❌ İşlem başarısız");
     }
-    setTimeout(() => setMessage(""), 3000);
+    setTimeout(() => setMessage(""), 5000);
   }
 
   async function handleExportExcel() {

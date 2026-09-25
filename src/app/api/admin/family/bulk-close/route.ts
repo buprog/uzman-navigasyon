@@ -21,17 +21,19 @@ export async function POST(req: Request) {
       );
     }
 
+    const closedAt = new Date();
+
     await prisma.$transaction([
       prisma.familyPlan.updateMany({
         where: { id: { in: ids } },
-        data: { status: "CLOSED" },
+        data: { status: "CLOSED", closedAt },
       }),
       prisma.familyMember.updateMany({
         where: {
           familyId: { in: ids },
           removedAt: null,
         },
-        data: { removedAt: new Date() },
+        data: { removedAt: closedAt },
       }),
     ]);
 
