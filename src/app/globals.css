@@ -70,6 +70,44 @@ body {
   @apply bg-slate-800;
 }
 
+/* Remap lighter gray backgrounds */
+[data-mode="night"] .bg-slate-200 {
+  @apply bg-slate-700;
+}
+
+[data-mode="night"] .bg-slate-300 {
+  @apply bg-slate-700;
+}
+
+[data-mode="night"] .bg-gray-200 {
+  @apply bg-slate-700;
+}
+
+[data-mode="night"] .bg-gray-300 {
+  @apply bg-slate-700;
+}
+
+/* Remap white with opacity variants */
+[data-mode="night"] .bg-white\/95 {
+  @apply bg-slate-800/95;
+}
+
+[data-mode="night"] .bg-white\/90 {
+  @apply bg-slate-800/90;
+}
+
+[data-mode="night"] .bg-white\/80 {
+  @apply bg-slate-800/80;
+}
+
+[data-mode="night"] .bg-white\/70 {
+  @apply bg-slate-800/70;
+}
+
+[data-mode="night"] .bg-white\/50 {
+  @apply bg-slate-700/50;
+}
+
 /* Remap dark text to light */
 [data-mode="night"] .text-slate-900 {
   @apply text-slate-100;
@@ -141,10 +179,15 @@ body {
   @apply text-slate-300;
 }
 
-[data-mode="night"] input,
+[data-mode="night"] input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
 [data-mode="night"] select,
 [data-mode="night"] textarea {
   @apply bg-slate-800 text-slate-100 border-slate-600 placeholder-slate-400;
+}
+
+/* Range sliders need visible track in night mode */
+[data-mode="night"] input[type="range"] {
+  @apply accent-teal-600;
 }
 
 [data-mode="night"] input::placeholder,
@@ -156,6 +199,40 @@ body {
 /* Secondary button in night mode */
 [data-mode="night"] .btn-secondary {
   @apply bg-slate-700 border-slate-600 text-slate-100 hover:bg-slate-600;
+}
+
+/* Teal/brand backgrounds: use darker shades in night mode for better contrast with white text */
+[data-mode="night"] .bg-teal-600 {
+  @apply bg-teal-700;
+}
+
+[data-mode="night"] .bg-teal-700 {
+  @apply bg-teal-800;
+}
+
+[data-mode="night"] .btn-primary {
+  @apply bg-teal-800 hover:bg-teal-900;
+}
+
+/* Avatar/badge backgrounds with brand colors */
+[data-mode="night"] .bg-teal-500 {
+  @apply bg-teal-700;
+}
+
+/* Remap cyan/teal lighter shades used for badges or accents */
+[data-mode="night"] .bg-cyan-50 {
+  @apply bg-teal-900/30;
+}
+
+[data-mode="night"] .bg-cyan-100 {
+  @apply bg-teal-800/40;
+}
+
+[data-mode="night"] .text-cyan-600,
+[data-mode="night"] .text-cyan-700,
+[data-mode="night"] .text-teal-600,
+[data-mode="night"] .text-teal-700 {
+  @apply text-teal-300;
 }
 .badge-basic {
   @apply inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600;

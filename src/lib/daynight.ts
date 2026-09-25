@@ -83,32 +83,31 @@ export function calculateSunTimes(lat: number, lng: number, date: Date = new Dat
   // Sunset time (fraction of day)
   const sunsetTime = solarNoon + haAngle * 4 / 1440;
   
-  // Convert to Date objects
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const day = date.getDate();
+  // Convert to Date objects using UTC (solar times are in UTC)
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
   
-  const sunrise = new Date(year, month, day);
-  sunrise.setHours(0, 0, 0, 0);
-  sunrise.setMinutes(sunriseTime * 1440);
+  const sunrise = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+  sunrise.setUTCMinutes(sunriseTime * 1440);
   
-  const sunset = new Date(year, month, day);
-  sunset.setHours(0, 0, 0, 0);
-  sunset.setMinutes(sunsetTime * 1440);
+  const sunset = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+  sunset.setUTCMinutes(sunsetTime * 1440);
   
   return { sunrise, sunset };
 }
 
 /**
  * Get Julian Day from Date
+ * Must use UTC to ensure consistent solar calculations regardless of local timezone
  */
 function getJulianDay(date: Date): number {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const seconds = date.getSeconds();
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
+  const hours = date.getUTCHours();
+  const minutes = date.getUTCMinutes();
+  const seconds = date.getUTCSeconds();
   
   const a = Math.floor((14 - month) / 12);
   const y = year + 4800 - a;
