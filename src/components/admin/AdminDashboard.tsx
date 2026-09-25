@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { AdsTab } from "./AdsTab";
 import { SettingsTab } from "./SettingsTab";
 import { DiscountCodesTab } from "./DiscountCodesTab";
+import { FamilyTab } from "./FamilyTab";
 
 type Props = {
   adminEmail: string;
@@ -13,7 +14,7 @@ type Props = {
 export function AdminDashboard({ adminEmail }: Props) {
   const router = useRouter();
   const pathname = usePathname();
-  const [activeTab, setActiveTab] = useState<"ads" | "settings" | "discounts">("ads");
+  const [activeTab, setActiveTab] = useState<"ads" | "settings" | "discounts" | "families">("ads");
 
   async function handleSignOut() {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -65,6 +66,16 @@ export function AdminDashboard({ adminEmail }: Props) {
             🎟️ İndirim Kodları
           </button>
           <button
+            onClick={() => setActiveTab("families")}
+            className={`px-6 py-3 font-semibold transition ${
+              activeTab === "families"
+                ? "text-teal-700 border-b-2 border-teal-700"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            👨‍👩‍👧‍👦 Aileler
+          </button>
+          <button
             onClick={() => setActiveTab("settings")}
             className={`px-6 py-3 font-semibold transition ${
               activeTab === "settings"
@@ -78,6 +89,7 @@ export function AdminDashboard({ adminEmail }: Props) {
 
         {activeTab === "ads" && <AdsTab />}
         {activeTab === "discounts" && <DiscountCodesTab />}
+        {activeTab === "families" && <FamilyTab />}
         {activeTab === "settings" && <SettingsTab />}
       </div>
     </div>

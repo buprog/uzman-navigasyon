@@ -190,33 +190,37 @@ model Ad {
 }
 
 model AdSettings {
-  id               String   @id @default("default")
-  rotationInterval Int      @default(5) // seconds
-  rotationMode     String   @default("sıralı") // sıralı | rastgele
-  updatedAt        DateTime @updatedAt
+  id                   String   @id @default("default")
+  rotationInterval     Int      @default(5) // seconds
+  rotationMode         String   @default("sıralı") // sıralı | rastgele
+  individualYearlyTl   Float    @default(600) // Bireysel yıllık fiyat
+  familyYearlyTl       Float?   // Aile yıllık fiyat (null = gösterilmez)
+  familyMaxMembers     Int      @default(5) // Aile max üye sayısı
+  updatedAt            DateTime @updatedAt
 }
 
 model DiscountCode {
-  id           String   @id @default(cuid())
-  code         String   @unique // uppercase, format PREFIX-XXXXXX
-  type         String   // PREMIUM_DAYS | PERCENT
-  premiumDays  Int?     // default 365 for PREMIUM_DAYS type
-  percent      Int?     // for PERCENT type
-  startsAt     DateTime
-  endsAt       DateTime
-  maxUses      Int      @default(1)
-  usedCount    Int      @default(0)
-  batchName    String?  // toplu satış grubu
-  batchId      String?  // toplu satış grubu ID
-  fullName     String?
-  company      String?
-  phone        String?
-  email        String?
-  note         String?
-  disabled     Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  redemptions  DiscountRedemption[]
+  id               String   @id @default(cuid())
+  code             String   @unique // uppercase, format PREFIX-XXXXXX
+  type             String   // PREMIUM_DAYS | PERCENT | FAMILY
+  premiumDays      Int?     // default 365 for PREMIUM_DAYS and FAMILY types
+  percent          Int?     // for PERCENT type
+  familyMaxMembers Int?     // for FAMILY type (default 5)
+  startsAt         DateTime
+  endsAt           DateTime
+  maxUses          Int      @default(1)
+  usedCount        Int      @default(0)
+  batchName        String?  // toplu satış grubu
+  batchId          String?  // toplu satış grubu ID
+  fullName         String?
+  company          String?
+  phone            String?
+  email            String?
+  note             String?
+  disabled         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  redemptions      DiscountRedemption[]
 
   @@index([batchId])
   @@index([endsAt])
@@ -233,4 +237,42 @@ model DiscountRedemption {
 
   @@unique([codeId, deviceId])
   @@index([deviceId])
+}
+
+model FamilyPlan {
+  id              String   @id @default(cuid())
+  ownerDeviceId   String
+  name            String?
+  maxMembers      Int      @default(5) // includes owner
+  inviteCode      String   @unique // format AILE-XXXXXX
+  premiumUntil    DateTime
+  status          String   // ACTIVE | CLOSED
+  closedAt        DateTime? // timestamp when bulk-close set status=CLOSED (null if never closed or currently ACTIVE)
+  source          String   // code | admin | purchase
+  discountCodeId  String?
+  fullName        String?
+  phone           String?
+  email           String?
+  note            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  members         FamilyMember[]
+
+  @@index([ownerDeviceId])
+  @@index([status])
+  @@index([premiumUntil])
+}
+
+model FamilyMember {
+  id         String    @id @default(cuid())
+  familyId   String
+  family     FamilyPlan @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  deviceId   String
+  role       String    // OWNER | MEMBER
+  joinedAt   DateTime  @default(now())
+  removedAt  DateTime?
+
+  @@index([familyId])
+  @@index([deviceId, removedAt])
+  @@unique([familyId, deviceId], name: "familyId_deviceId")
 }

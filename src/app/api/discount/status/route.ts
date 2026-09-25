@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getDevicePremiumStatus } from "@/lib/effectivePlan";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/discount/status?deviceId=...
- * Public API to check device premium status
+ * Public API to check device premium status with family membership support
  */
 export async function GET(req: Request) {
   const headers = {
@@ -25,16 +25,9 @@ export async function GET(req: Request) {
       );
     }
 
-    const device = await prisma.deviceIdentity.findUnique({
-      where: { deviceId },
-    });
+    const status = await getDevicePremiumStatus(deviceId);
 
-    const premiumUntil =
-      device?.premiumExpiresAt && device.premiumExpiresAt > new Date()
-        ? device.premiumExpiresAt.toISOString()
-        : null;
-
-    return NextResponse.json({ premiumUntil }, { headers });
+    return NextResponse.json(status, { headers });
   } catch (error) {
     console.error("Failed to check discount status:", error);
     return NextResponse.json(
