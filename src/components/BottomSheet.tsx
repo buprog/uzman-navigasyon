@@ -194,7 +194,7 @@ export function BottomSheet({ children, defaultSnap = "collapsed", onSnapChange,
         className="flex shrink-0 items-center justify-center py-3 cursor-grab active:cursor-grabbing"
         onClick={cycleSnap}
       >
-        <div className="h-1 w-12 rounded-full bg-slate-300" />
+        <div className="h-1 w-12 rounded-full bg-slate-300 [html[data-mode='night']_&]:bg-slate-500" />
       </div>
       <div
         ref={contentRef}

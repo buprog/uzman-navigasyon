@@ -28,7 +28,11 @@ const LOCATION_PERMISSION_SHOWN_KEY = "un_daynight_permission_shown";
  * https://www.esrl.noaa.gov/gmd/grad/solcalc/calcdetails.html
  */
 export function calculateSunTimes(lat: number, lng: number, date: Date = new Date()): SunTimes {
-  const julianDay = getJulianDay(date);
+  // Derive the solar local date by adding longitude offset (lng/15 hours)
+  // This ensures we use the correct day for locations far from UTC
+  const solarLocalDate = new Date(date.getTime() + (lng / 15) * 60 * 60 * 1000);
+  
+  const julianDay = getJulianDay(solarLocalDate);
   const julianCentury = (julianDay - 2451545) / 36525;
   
   // Sun's geometric mean longitude (degrees)
@@ -84,9 +88,10 @@ export function calculateSunTimes(lat: number, lng: number, date: Date = new Dat
   const sunsetTime = solarNoon + haAngle * 4 / 1440;
   
   // Convert to Date objects using UTC (solar times are in UTC)
-  const year = date.getUTCFullYear();
-  const month = date.getUTCMonth();
-  const day = date.getUTCDate();
+  // Use solarLocalDate to ensure correct day for locations far from UTC
+  const year = solarLocalDate.getUTCFullYear();
+  const month = solarLocalDate.getUTCMonth();
+  const day = solarLocalDate.getUTCDate();
   
   const sunrise = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
   sunrise.setUTCMinutes(sunriseTime * 1440);

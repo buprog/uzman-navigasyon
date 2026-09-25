@@ -332,12 +332,12 @@ select:focus {
   --color-text-secondary: #cbd5e1;
   --color-text-tertiary: #94a3b8;
   
-  --color-accent: #14b8a6;
-  --color-accent-hover: #2dd4bf;
+  --color-accent: #0f766e;
+  --color-accent-hover: #115e59;
   --color-accent-light: #0f766e;
   
-  --color-btn-primary-bg: #14b8a6;
-  --color-btn-primary-hover: #2dd4bf;
+  --color-btn-primary-bg: #0f766e;
+  --color-btn-primary-hover: #115e59;
   --color-btn-primary-text: #ffffff;
   --color-btn-secondary-bg: #334155;
   --color-btn-secondary-hover: #475569;
@@ -361,12 +361,12 @@ select:focus {
   --color-text-secondary: #d4a8ce;
   --color-text-tertiary: #b48aae;
   
-  --color-accent: #e390c0;
-  --color-accent-hover: #f0a8d3;
+  --color-accent: #b4447f;
+  --color-accent-hover: #9a3a6b;
   --color-accent-light: #6d3055;
   
-  --color-btn-primary-bg: #e390c0;
-  --color-btn-primary-hover: #f0a8d3;
+  --color-btn-primary-bg: #b4447f;
+  --color-btn-primary-hover: #9a3a6b;
   --color-btn-primary-text: #ffffff;
   --color-btn-secondary-bg: #4d3750;
   --color-btn-secondary-hover: #5d4560;
@@ -378,9 +378,9 @@ select:focus {
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
   
-  --shadow-sm: 0 2px 4px 0 rgb(227 144 192 / 0.12);
-  --shadow-md: 0 4px 8px -1px rgb(227 144 192 / 0.16);
-  --shadow-lg: 0 10px 20px -3px rgb(227 144 192 / 0.20);
+  --shadow-sm: 0 2px 4px 0 rgb(180 68 127 / 0.12);
+  --shadow-md: 0 4px 8px -1px rgb(180 68 127 / 0.16);
+  --shadow-lg: 0 10px 20px -3px rgb(180 68 127 / 0.20);
 }
 
 /* MALE NIGHT (Near-black surfaces, ultra high contrast) */
@@ -400,12 +400,12 @@ select:focus {
   --color-text-secondary: #d0d8e0;
   --color-text-tertiary: #a0acb8;
   
-  --color-accent: #5a9fff;
-  --color-accent-hover: #78b1ff;
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
   --color-accent-light: #1e3a5f;
   
-  --color-btn-primary-bg: #5a9fff;
-  --color-btn-primary-hover: #78b1ff;
+  --color-btn-primary-bg: #2563eb;
+  --color-btn-primary-hover: #1d4ed8;
   --color-btn-primary-text: #ffffff;
   --color-btn-secondary-bg: #151d30;
   --color-btn-secondary-hover: #1d2740;
