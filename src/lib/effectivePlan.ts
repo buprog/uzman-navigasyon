@@ -1,6 +1,8 @@
 /**
  * Device-aware effective plan resolution with family membership support
- * Priority: device individual premium > family membership > user plan
+ * premiumUntil = LATER of individual and family premium (if both active)
+ * source = whichever gives the later date (tie: individual)
+ * family info included whenever device has active membership in ACTIVE unexpired family
  */
 
 import { cookies } from "next/headers";
@@ -12,6 +14,7 @@ export type FamilyInfo = {
   role: "OWNER" | "MEMBER";
   inviteCode?: string; // owner only
   members?: Array<{
+    id: string; // member id for removal
     deviceIdShort: string;
     role: "OWNER" | "MEMBER";
     joinedAt: string;
@@ -26,6 +29,12 @@ export type EffectivePlan = {
   isDevicePremium: boolean;
   source?: PremiumSource;
   family?: FamilyInfo;
+};
+
+export type DevicePremiumStatus = {
+  premiumUntil: string | null;
+  source: PremiumSource;
+  family: FamilyInfo | null;
 };
 
 const DEVICE_ID_COOKIE = "un_did";
@@ -43,16 +52,24 @@ export function getDeviceIdFromCookie(): string | null {
 }
 
 /**
- * Check if device has active family membership
+ * Get device premium status (shared helper for /api/auth/me and /api/discount/status)
+ * Returns the LATER of individual and family premium, plus family info if applicable
  */
-async function getFamilyMembership(deviceId: string): Promise<{
-  hasPremium: boolean;
-  premiumExpiresAt: Date | null;
-  familyInfo: FamilyInfo | null;
-}> {
+export async function getDevicePremiumStatus(
+  deviceId: string
+): Promise<DevicePremiumStatus> {
   const now = new Date();
 
-  // Find active membership for this device
+  // Check individual premium
+  const device = await prisma.deviceIdentity.findUnique({
+    where: { deviceId },
+  });
+
+  const individualPremium = device?.premiumExpiresAt;
+  const individualActive =
+    individualPremium && individualPremium > now ? individualPremium : null;
+
+  // Check family membership
   const membership = await prisma.familyMember.findFirst({
     where: {
       deviceId,
@@ -74,106 +91,83 @@ async function getFamilyMembership(deviceId: string): Promise<{
     },
   });
 
-  if (!membership || membership.family.status !== "ACTIVE") {
-    return { hasPremium: false, premiumExpiresAt: null, familyInfo: null };
+  let familyPremium: Date | null = null;
+  let familyInfo: FamilyInfo | null = null;
+
+  if (
+    membership &&
+    membership.family.status === "ACTIVE" &&
+    membership.family.premiumUntil > now
+  ) {
+    familyPremium = membership.family.premiumUntil;
+
+    familyInfo = {
+      role: membership.role as "OWNER" | "MEMBER",
+      maxMembers: membership.family.maxMembers,
+      premiumUntil: membership.family.premiumUntil.toISOString(),
+    };
+
+    // Include invite code and member list only for owner
+    if (membership.role === "OWNER") {
+      familyInfo.inviteCode = membership.family.inviteCode;
+      familyInfo.members = membership.family.members.map((m) => ({
+        id: m.id,
+        deviceIdShort: m.deviceId.substring(0, 8),
+        role: m.role as "OWNER" | "MEMBER",
+        joinedAt: m.joinedAt.toISOString(),
+      }));
+    }
   }
 
-  const family = membership.family;
-  const hasPremium = family.premiumUntil > now;
+  // Determine the later premium date and source
+  let premiumUntil: string | null = null;
+  let source: PremiumSource = null;
 
-  if (!hasPremium) {
-    return { hasPremium: false, premiumExpiresAt: null, familyInfo: null };
-  }
-
-  const familyInfo: FamilyInfo = {
-    role: membership.role as "OWNER" | "MEMBER",
-    maxMembers: family.maxMembers,
-    premiumUntil: family.premiumUntil.toISOString(),
-  };
-
-  // Include invite code and member list only for owner
-  if (membership.role === "OWNER") {
-    familyInfo.inviteCode = family.inviteCode;
-    familyInfo.members = family.members.map((m) => ({
-      deviceIdShort: m.deviceId.substring(0, 8),
-      role: m.role as "OWNER" | "MEMBER",
-      joinedAt: m.joinedAt.toISOString(),
-    }));
+  if (individualActive && familyPremium) {
+    // Both active: choose the later one (tie: individual)
+    if (individualActive >= familyPremium) {
+      premiumUntil = individualActive.toISOString();
+      source = "individual";
+    } else {
+      premiumUntil = familyPremium.toISOString();
+      source = "family";
+    }
+  } else if (individualActive) {
+    premiumUntil = individualActive.toISOString();
+    source = "individual";
+  } else if (familyPremium) {
+    premiumUntil = familyPremium.toISOString();
+    source = "family";
   }
 
   return {
-    hasPremium,
-    premiumExpiresAt: family.premiumUntil,
-    familyInfo,
+    premiumUntil,
+    source,
+    family: familyInfo,
   };
-}
-
-/**
- * Check if device has active premium
- */
-export async function getDevicePremium(
-  deviceId: string | null
-): Promise<{ hasPremium: boolean; premiumExpiresAt: Date | null }> {
-  if (!deviceId) {
-    return { hasPremium: false, premiumExpiresAt: null };
-  }
-
-  try {
-    const device = await prisma.deviceIdentity.findUnique({
-      where: { deviceId },
-    });
-
-    if (!device || !device.premiumExpiresAt) {
-      return { hasPremium: false, premiumExpiresAt: null };
-    }
-
-    const now = new Date();
-    const hasPremium = device.premiumExpiresAt > now;
-
-    return {
-      hasPremium,
-      premiumExpiresAt: hasPremium ? device.premiumExpiresAt : null,
-    };
-  } catch {
-    return { hasPremium: false, premiumExpiresAt: null };
-  }
 }
 
 /**
  * Resolve effective plan for a user, considering device premium and family membership
- * Priority: device individual premium > family membership > user plan
+ * Returns the LATER of individual and family premium
  */
 export async function getEffectivePlan(
   userPlan: string | null | undefined,
   userPremiumExpiresAt: Date | string | null | undefined,
   deviceId?: string | null
 ): Promise<EffectivePlan> {
-  // Get actual device ID
   const actualDeviceId = deviceId ?? getDeviceIdFromCookie();
 
-  // First check device individual premium
-  const devicePremium = await getDevicePremium(actualDeviceId);
-
-  if (devicePremium.hasPremium) {
-    return {
-      plan: "premium",
-      premiumExpiresAt: devicePremium.premiumExpiresAt,
-      isDevicePremium: true,
-      source: "individual",
-    };
-  }
-
-  // Then check family membership
   if (actualDeviceId) {
-    const familyMembership = await getFamilyMembership(actualDeviceId);
+    const deviceStatus = await getDevicePremiumStatus(actualDeviceId);
 
-    if (familyMembership.hasPremium) {
+    if (deviceStatus.premiumUntil) {
       return {
         plan: "premium",
-        premiumExpiresAt: familyMembership.premiumExpiresAt,
+        premiumExpiresAt: new Date(deviceStatus.premiumUntil),
         isDevicePremium: true,
-        source: "family",
-        family: familyMembership.familyInfo!,
+        source: deviceStatus.source,
+        family: deviceStatus.family || undefined,
       };
     }
   }

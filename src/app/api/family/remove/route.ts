@@ -6,7 +6,8 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/family/remove
  * Remove a member from family (owner only)
- * Contract: {"ownerDeviceId": string, "memberDeviceIdShort"?: string, "memberId"?: string}
+ * Contract: {"ownerDeviceId": string, "memberId"?: string, "memberDeviceIdShort"?: string}
+ * Prefer memberId; memberDeviceIdShort is fallback (returns 409 "ambiguous" if multiple matches)
  */
 export async function POST(req: Request) {
   const headers = {
@@ -17,14 +18,14 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { ownerDeviceId, memberDeviceIdShort, memberId } = body;
+    const { ownerDeviceId, memberId, memberDeviceIdShort } = body;
 
     if (!ownerDeviceId || (!memberDeviceIdShort && !memberId)) {
       return NextResponse.json(
         {
           ok: false,
           error: "bad_request",
-          message: "ownerDeviceId ve (memberDeviceIdShort veya memberId) gerekli",
+          message: "ownerDeviceId ve (memberId veya memberDeviceIdShort) gerekli",
         },
         { status: 400, headers }
       );
@@ -60,16 +61,27 @@ export async function POST(req: Request) {
         };
       }
 
-      // Find member to remove
+      // Find member to remove (prefer memberId)
       let memberToRemove;
       if (memberId) {
         memberToRemove = ownerMembership.family.members.find(
           (m) => m.id === memberId
         );
       } else if (memberDeviceIdShort) {
-        memberToRemove = ownerMembership.family.members.find((m) =>
+        const matches = ownerMembership.family.members.filter((m) =>
           m.deviceId.startsWith(memberDeviceIdShort)
         );
+        if (matches.length > 1) {
+          return {
+            status: 409,
+            body: {
+              ok: false,
+              error: "ambiguous",
+              message: "Birden fazla üye eşleşti, memberId kullanın",
+            },
+          };
+        }
+        memberToRemove = matches[0];
       }
 
       if (!memberToRemove) {

@@ -5,6 +5,19 @@ import { generateFamilyInviteCode } from "@/lib/familyInviteCode";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Hash a string to a 32-bit integer for pg_advisory_xact_lock
+ */
+function hashStringTo32bit(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return hash >>> 0; // Ensure unsigned
+}
+
 export async function POST(req: Request) {
   const adminEmail = await requireAdmin();
   if (!adminEmail) {
@@ -29,21 +42,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if device already owns an active family
-    const existingFamily = await prisma.familyPlan.findFirst({
-      where: {
-        ownerDeviceId,
-        status: "ACTIVE",
-      },
-    });
-
-    if (existingFamily) {
-      return NextResponse.json(
-        { error: "Bu cihaz zaten aktif bir aileye sahip" },
-        { status: 400 }
-      );
-    }
-
     // Generate unique invite code
     let inviteCode: string;
     let attempts = 0;
@@ -62,8 +60,32 @@ export async function POST(req: Request) {
     const now = new Date();
     const premiumUntil = new Date(now.getTime() + premiumDays * 24 * 60 * 60 * 1000);
 
-    // Create family in transaction
+    // Create family in transaction with device lock
     const result = await prisma.$transaction(async (tx) => {
+      // Acquire device lock to enforce one-family-per-device atomically
+      const deviceLock = hashStringTo32bit(ownerDeviceId);
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${deviceLock})`;
+
+      // Check if device is already a MEMBER in another family
+      const existingMembership = await tx.familyMember.findFirst({
+        where: {
+          deviceId: ownerDeviceId,
+          removedAt: null,
+        },
+        include: {
+          family: true,
+        },
+      });
+
+      if (existingMembership) {
+        if (existingMembership.role === "MEMBER" && existingMembership.family.status === "ACTIVE") {
+          throw new Error("Bu cihaz başka bir ailenin üyesi");
+        }
+        if (existingMembership.role === "OWNER" && existingMembership.family.status === "ACTIVE") {
+          throw new Error("Bu cihaz zaten aktif bir aileye sahip");
+        }
+      }
+
       const family = await tx.familyPlan.create({
         data: {
           ownerDeviceId,
@@ -102,8 +124,11 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json({ family: result });
-  } catch (e) {
+  } catch (e: any) {
     console.error("[admin/family/create]", e);
-    return NextResponse.json({ error: "Aile oluşturulamadı" }, { status: 500 });
+    return NextResponse.json(
+      { error: e.message || "Aile oluşturulamadı" },
+      { status: 400 }
+    );
   }
 }

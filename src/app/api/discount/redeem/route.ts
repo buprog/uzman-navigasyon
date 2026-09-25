@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizeDiscountCode } from "@/lib/discountCode";
 import { generateFamilyInviteCode } from "@/lib/familyInviteCode";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,19 @@ function getClientKey(req: Request, deviceId: string): string {
     req.headers.get("x-real-ip") ||
     "unknown";
   return `${ip}:${deviceId}`;
+}
+
+/**
+ * Hash a string to a 32-bit integer for pg_advisory_xact_lock
+ */
+function hashStringTo32bit(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return hash >>> 0; // Ensure unsigned
 }
 
 /**
@@ -75,7 +89,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Rate limiting (using body deviceId now)
+    // Rate limiting
     const clientKey = getClientKey(req, deviceId);
     if (!checkRateLimit(clientKey)) {
       return NextResponse.json(
@@ -91,131 +105,14 @@ export async function POST(req: Request) {
     const code = normalizeDiscountCode(rawCode);
 
     // Use interactive transaction for atomicity
-    const result = await prisma.$transaction(async (tx) => {
-      // Find the code
-      const discountCode = await tx.discountCode.findUnique({
-        where: { code },
-      });
-
-      if (!discountCode) {
-        return {
-          status: 404,
-          body: {
-            ok: false,
-            error: "not_found",
-            message: "Geçersiz kod",
-          },
-        };
-      }
-
-      // Check if already redeemed by this device (idempotent)
-      const existingRedemption = await tx.discountRedemption.findUnique({
-        where: {
-          codeId_deviceId: {
-            codeId: discountCode.id,
-            deviceId,
-          },
-        },
-      });
-
-      if (existingRedemption) {
-        // Return existing premium info
-        const responseBody: any = {
-          ok: false,
-          error: "already_redeemed",
-          message: "Bu kod zaten kullanılmış",
-          premiumUntil: existingRedemption.premiumUntil?.toISOString() || null,
-        };
-
-        // For FAMILY type, also return family info
-        if (discountCode.type === "FAMILY") {
-          const family = await tx.familyPlan.findFirst({
-            where: {
-              ownerDeviceId: deviceId,
-              discountCodeId: discountCode.id,
-            },
-          });
-          if (family) {
-            responseBody.type = "FAMILY";
-            responseBody.inviteCode = family.inviteCode;
-            responseBody.maxMembers = family.maxMembers;
-          }
-        }
-
-        return {
-          status: 409,
-          body: responseBody,
-        };
-      }
-
-      // Check code validity
-      const now = new Date();
-
-      if (discountCode.disabled) {
-        return {
-          status: 410,
-          body: {
-            ok: false,
-            error: "disabled",
-            message: "Bu kod devre dışı",
-          },
-        };
-      }
-
-      if (now < discountCode.startsAt) {
-        return {
-          status: 400,
-          body: {
-            ok: false,
-            error: "not_started",
-            message: "Bu kod henüz geçerli değil",
-          },
-        };
-      }
-
-      if (now > discountCode.endsAt) {
-        return {
-          status: 410,
-          body: {
-            ok: false,
-            error: "expired",
-            message: "Bu kodun süresi dolmuş",
-          },
-        };
-      }
-
-      if (discountCode.usedCount >= discountCode.maxUses) {
-        return {
-          status: 410,
-          body: {
-            ok: false,
-            error: "used_up",
-            message: "Bu kod kullanım limitine ulaştı",
-          },
-        };
-      }
-
-      // Atomically claim a use with conditional update
-      const updated = await tx.discountCode.updateMany({
-        where: {
-          id: discountCode.id,
-          disabled: false,
-          startsAt: { lte: now },
-          endsAt: { gte: now },
-          usedCount: { lt: discountCode.maxUses },
-        },
-        data: {
-          usedCount: { increment: 1 },
-        },
-      });
-
-      // If no rows updated, re-read the code and return accurate reason
-      if (updated.count === 0) {
-        const currentCode = await tx.discountCode.findUnique({
-          where: { id: discountCode.id },
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        // Find the code
+        const discountCode = await tx.discountCode.findUnique({
+          where: { code },
         });
 
-        if (!currentCode) {
+        if (!discountCode) {
           return {
             status: 404,
             body: {
@@ -226,7 +123,50 @@ export async function POST(req: Request) {
           };
         }
 
-        if (currentCode.disabled) {
+        // Check if already redeemed by this device (idempotent)
+        const existingRedemption = await tx.discountRedemption.findUnique({
+          where: {
+            codeId_deviceId: {
+              codeId: discountCode.id,
+              deviceId,
+            },
+          },
+        });
+
+        if (existingRedemption) {
+          // Return existing premium info
+          const responseBody: any = {
+            ok: false,
+            error: "already_redeemed",
+            message: "Bu kod zaten kullanılmış",
+            premiumUntil: existingRedemption.premiumUntil?.toISOString() || null,
+          };
+
+          // For FAMILY type, also return family info
+          if (discountCode.type === "FAMILY") {
+            const family = await tx.familyPlan.findFirst({
+              where: {
+                ownerDeviceId: deviceId,
+                discountCodeId: discountCode.id,
+              },
+            });
+            if (family) {
+              responseBody.type = "FAMILY";
+              responseBody.inviteCode = family.inviteCode;
+              responseBody.maxMembers = family.maxMembers;
+            }
+          }
+
+          return {
+            status: 409,
+            body: responseBody,
+          };
+        }
+
+        // Check code validity
+        const now = new Date();
+
+        if (discountCode.disabled) {
           return {
             status: 410,
             body: {
@@ -237,7 +177,7 @@ export async function POST(req: Request) {
           };
         }
 
-        if (now < currentCode.startsAt) {
+        if (now < discountCode.startsAt) {
           return {
             status: 400,
             body: {
@@ -248,7 +188,7 @@ export async function POST(req: Request) {
           };
         }
 
-        if (now > currentCode.endsAt) {
+        if (now > discountCode.endsAt) {
           return {
             status: 410,
             body: {
@@ -259,161 +199,317 @@ export async function POST(req: Request) {
           };
         }
 
-        // Must be used up
-        return {
-          status: 410,
-          body: {
-            ok: false,
-            error: "used_up",
-            message: "Bu kod kullanım limitine ulaştı",
-          },
-        };
-      }
-
-      // Calculate premium until and handle type-specific logic
-      let premiumUntil: Date | null = null;
-      let familyInviteCode: string | undefined;
-      let familyMaxMembers: number | undefined;
-
-      if (discountCode.type === "PREMIUM_DAYS") {
-        // Find or create device identity
-        let device = await tx.deviceIdentity.findUnique({
-          where: { deviceId },
-        });
-
-        const currentPremium = device?.premiumExpiresAt || now;
-        const extendFrom = currentPremium > now ? currentPremium : now;
-        premiumUntil = new Date(
-          extendFrom.getTime() +
-            (discountCode.premiumDays || 365) * 24 * 60 * 60 * 1000
-        );
-
-        if (device) {
-          // Update existing device
-          await tx.deviceIdentity.update({
-            where: { id: device.id },
-            data: { premiumExpiresAt: premiumUntil },
-          });
-        } else {
-          // Create new device
-          await tx.deviceIdentity.create({
-            data: {
-              deviceId,
-              fingerprintHash: null,
-              premiumExpiresAt: premiumUntil,
+        if (discountCode.usedCount >= discountCode.maxUses) {
+          return {
+            status: 410,
+            body: {
+              ok: false,
+              error: "used_up",
+              message: "Bu kod kullanım limitine ulaştı",
             },
-          });
+          };
         }
-      } else if (discountCode.type === "FAMILY") {
-        // Create or extend family plan
-        const maxMembers = discountCode.familyMaxMembers || 5;
-        const premiumDays = discountCode.premiumDays || 365;
 
-        // Check if device already owns an active family
-        const existingFamily = await tx.familyPlan.findFirst({
+        // Atomically claim a use with conditional update
+        const updated = await tx.discountCode.updateMany({
           where: {
-            ownerDeviceId: deviceId,
-            status: "ACTIVE",
+            id: discountCode.id,
+            disabled: false,
+            startsAt: { lte: now },
+            endsAt: { gte: now },
+            usedCount: { lt: discountCode.maxUses },
+          },
+          data: {
+            usedCount: { increment: 1 },
           },
         });
 
-        if (existingFamily) {
-          // Extend existing family
-          const currentPremium = existingFamily.premiumUntil;
+        // If no rows updated, re-read the code and return accurate reason
+        if (updated.count === 0) {
+          const currentCode = await tx.discountCode.findUnique({
+            where: { id: discountCode.id },
+          });
+
+          if (!currentCode) {
+            return {
+              status: 404,
+              body: {
+                ok: false,
+                error: "not_found",
+                message: "Geçersiz kod",
+              },
+            };
+          }
+
+          if (currentCode.disabled) {
+            return {
+              status: 410,
+              body: {
+                ok: false,
+                error: "disabled",
+                message: "Bu kod devre dışı",
+              },
+            };
+          }
+
+          if (now < currentCode.startsAt) {
+            return {
+              status: 400,
+              body: {
+                ok: false,
+                error: "not_started",
+                message: "Bu kod henüz geçerli değil",
+              },
+            };
+          }
+
+          if (now > currentCode.endsAt) {
+            return {
+              status: 410,
+              body: {
+                ok: false,
+                error: "expired",
+                message: "Bu kodun süresi dolmuş",
+              },
+            };
+          }
+
+          // Must be used up
+          return {
+            status: 410,
+            body: {
+              ok: false,
+              error: "used_up",
+              message: "Bu kod kullanım limitine ulaştı",
+            },
+          };
+        }
+
+        // Calculate premium until and handle type-specific logic
+        let premiumUntil: Date | null = null;
+        let familyInviteCode: string | undefined;
+        let familyMaxMembers: number | undefined;
+
+        if (discountCode.type === "PREMIUM_DAYS") {
+          // Find or create device identity
+          let device = await tx.deviceIdentity.findUnique({
+            where: { deviceId },
+          });
+
+          const currentPremium = device?.premiumExpiresAt || now;
           const extendFrom = currentPremium > now ? currentPremium : now;
           premiumUntil = new Date(
-            extendFrom.getTime() + premiumDays * 24 * 60 * 60 * 1000
+            extendFrom.getTime() +
+              (discountCode.premiumDays || 365) * 24 * 60 * 60 * 1000
           );
 
-          await tx.familyPlan.update({
-            where: { id: existingFamily.id },
-            data: { premiumUntil },
+          if (device) {
+            // Update existing device
+            await tx.deviceIdentity.update({
+              where: { id: device.id },
+              data: { premiumExpiresAt: premiumUntil },
+            });
+          } else {
+            // Create new device
+            await tx.deviceIdentity.create({
+              data: {
+                deviceId,
+                fingerprintHash: null,
+                premiumExpiresAt: premiumUntil,
+              },
+            });
+          }
+        } else if (discountCode.type === "FAMILY") {
+          // Acquire device lock to enforce one-family-per-device atomically
+          const deviceLock = hashStringTo32bit(deviceId);
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${deviceLock})`;
+
+          // Check if device is already a MEMBER in another family
+          const existingMembership = await tx.familyMember.findFirst({
+            where: {
+              deviceId,
+              removedAt: null,
+            },
+            include: {
+              family: true,
+            },
           });
 
-          familyInviteCode = existingFamily.inviteCode;
-          familyMaxMembers = existingFamily.maxMembers;
-        } else {
-          // Create new family plan
-          premiumUntil = new Date(
-            now.getTime() + premiumDays * 24 * 60 * 60 * 1000
-          );
-
-          // Generate unique invite code
-          let inviteCode: string;
-          let attempts = 0;
-          while (true) {
-            inviteCode = generateFamilyInviteCode();
-            const existing = await tx.familyPlan.findUnique({
-              where: { inviteCode },
-            });
-            if (!existing) break;
-            attempts++;
-            if (attempts > 10) {
-              throw new Error("Failed to generate unique invite code");
+          if (existingMembership) {
+            // Check if it's not their own OWNER membership
+            if (existingMembership.role === "MEMBER" && existingMembership.family.status === "ACTIVE") {
+              // Device is a MEMBER in another family - cannot create their own family
+              return {
+                status: 409,
+                body: {
+                  ok: false,
+                  error: "in_other_family",
+                  message: "Başka bir ailenin üyesisiniz, önce ayrılmanız gerekiyor",
+                },
+              };
             }
           }
 
-          const family = await tx.familyPlan.create({
-            data: {
+          // Create or extend family plan
+          const maxMembers = discountCode.familyMaxMembers || 5;
+          const premiumDays = discountCode.premiumDays || 365;
+
+          // Check if device already owns an active family
+          const existingFamily = await tx.familyPlan.findFirst({
+            where: {
               ownerDeviceId: deviceId,
-              inviteCode,
-              maxMembers,
-              premiumUntil,
               status: "ACTIVE",
-              source: "code",
-              discountCodeId: discountCode.id,
             },
           });
 
-          // Create owner membership
-          await tx.familyMember.create({
-            data: {
-              familyId: family.id,
+          if (existingFamily) {
+            // Extend existing family
+            const currentPremium = existingFamily.premiumUntil;
+            const extendFrom = currentPremium > now ? currentPremium : now;
+            premiumUntil = new Date(
+              extendFrom.getTime() + premiumDays * 24 * 60 * 60 * 1000
+            );
+
+            // maxMembers = max of existing and code
+            const newMaxMembers = Math.max(existingFamily.maxMembers, maxMembers);
+
+            await tx.familyPlan.update({
+              where: { id: existingFamily.id },
+              data: {
+                premiumUntil,
+                maxMembers: newMaxMembers,
+              },
+            });
+
+            familyInviteCode = existingFamily.inviteCode;
+            familyMaxMembers = newMaxMembers;
+          } else {
+            // Create new family plan
+            premiumUntil = new Date(
+              now.getTime() + premiumDays * 24 * 60 * 60 * 1000
+            );
+
+            // Generate unique invite code
+            let inviteCode: string;
+            let attempts = 0;
+            while (true) {
+              inviteCode = generateFamilyInviteCode();
+              const existing = await tx.familyPlan.findUnique({
+                where: { inviteCode },
+              });
+              if (!existing) break;
+              attempts++;
+              if (attempts > 10) {
+                throw new Error("Failed to generate unique invite code");
+              }
+            }
+
+            const family = await tx.familyPlan.create({
+              data: {
+                ownerDeviceId: deviceId,
+                inviteCode,
+                maxMembers,
+                premiumUntil,
+                status: "ACTIVE",
+                source: "code",
+                discountCodeId: discountCode.id,
+              },
+            });
+
+            // Create owner membership
+            await tx.familyMember.create({
+              data: {
+                familyId: family.id,
+                deviceId,
+                role: "OWNER",
+              },
+            });
+
+            familyInviteCode = inviteCode;
+            familyMaxMembers = maxMembers;
+          }
+        }
+
+        // Record redemption
+        await tx.discountRedemption.create({
+          data: {
+            codeId: discountCode.id,
+            deviceId,
+            platform,
+            premiumUntil,
+          },
+        });
+
+        const responseBody: any = {
+          ok: true,
+          type: discountCode.type,
+          premiumDays:
+            discountCode.type === "PREMIUM_DAYS" || discountCode.type === "FAMILY"
+              ? discountCode.premiumDays
+              : null,
+          percent:
+            discountCode.type === "PERCENT" ? discountCode.percent : null,
+          premiumUntil: premiumUntil?.toISOString() || null,
+        };
+
+        // Add family-specific fields
+        if (discountCode.type === "FAMILY") {
+          responseBody.inviteCode = familyInviteCode;
+          responseBody.maxMembers = familyMaxMembers;
+        }
+
+        return {
+          status: 200,
+          body: responseBody,
+        };
+      });
+
+      return NextResponse.json(result.body, { status: result.status, headers });
+    } catch (error) {
+      // Check for P2002 (unique constraint violation on DiscountRedemption)
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        // Transaction rolled back, re-read the existing redemption
+        const existingRedemption = await prisma.discountRedemption.findUnique({
+          where: {
+            codeId_deviceId: {
+              codeId: (await prisma.discountCode.findUnique({ where: { code } }))!.id,
               deviceId,
-              role: "OWNER",
             },
-          });
+          },
+          include: {
+            code: true,
+          },
+        });
 
-          familyInviteCode = inviteCode;
-          familyMaxMembers = maxMembers;
+        if (existingRedemption) {
+          const responseBody: any = {
+            ok: false,
+            error: "already_redeemed",
+            message: "Bu kod zaten kullanılmış",
+            premiumUntil: existingRedemption.premiumUntil?.toISOString() || null,
+          };
+
+          // For FAMILY type, also return family info
+          if (existingRedemption.code.type === "FAMILY") {
+            const family = await prisma.familyPlan.findFirst({
+              where: {
+                ownerDeviceId: deviceId,
+                discountCodeId: existingRedemption.code.id,
+              },
+            });
+            if (family) {
+              responseBody.type = "FAMILY";
+              responseBody.inviteCode = family.inviteCode;
+              responseBody.maxMembers = family.maxMembers;
+            }
+          }
+
+          return NextResponse.json(responseBody, { status: 409, headers });
         }
       }
 
-      // Record redemption
-      await tx.discountRedemption.create({
-        data: {
-          codeId: discountCode.id,
-          deviceId,
-          platform,
-          premiumUntil,
-        },
-      });
-
-      const responseBody: any = {
-        ok: true,
-        type: discountCode.type,
-        premiumDays:
-          discountCode.type === "PREMIUM_DAYS" || discountCode.type === "FAMILY"
-            ? discountCode.premiumDays
-            : null,
-        percent:
-          discountCode.type === "PERCENT" ? discountCode.percent : null,
-        premiumUntil: premiumUntil?.toISOString() || null,
-      };
-
-      // Add family-specific fields
-      if (discountCode.type === "FAMILY") {
-        responseBody.inviteCode = familyInviteCode;
-        responseBody.maxMembers = familyMaxMembers;
-      }
-
-      return {
-        status: 200,
-        body: responseBody,
-      };
-    });
-
-    return NextResponse.json(result.body, { status: result.status, headers });
+      throw error;
+    }
   } catch (error) {
     console.error("Failed to redeem discount code:", error);
     return NextResponse.json(

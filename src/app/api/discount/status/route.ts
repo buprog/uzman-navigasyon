@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getDevicePremium } from "@/lib/effectivePlan";
+import { getDevicePremiumStatus } from "@/lib/effectivePlan";
 
 export const dynamic = "force-dynamic";
 
@@ -26,75 +25,9 @@ export async function GET(req: Request) {
       );
     }
 
-    const now = new Date();
+    const status = await getDevicePremiumStatus(deviceId);
 
-    // Check device individual premium
-    const devicePremium = await getDevicePremium(deviceId);
-
-    // Check family membership
-    const membership = await prisma.familyMember.findFirst({
-      where: {
-        deviceId,
-        removedAt: null,
-      },
-      include: {
-        family: {
-          include: {
-            members: {
-              where: {
-                removedAt: null,
-              },
-              orderBy: {
-                joinedAt: "asc",
-              },
-            },
-          },
-        },
-      },
-    });
-
-    let premiumUntil: string | null = null;
-    let source: "individual" | "family" | null = null;
-    let family: any = null;
-
-    // Individual premium takes priority
-    if (devicePremium.hasPremium) {
-      premiumUntil = devicePremium.premiumExpiresAt!.toISOString();
-      source = "individual";
-    } else if (
-      membership &&
-      membership.family.status === "ACTIVE" &&
-      membership.family.premiumUntil > now
-    ) {
-      // Family premium
-      premiumUntil = membership.family.premiumUntil.toISOString();
-      source = "family";
-
-      family = {
-        role: membership.role,
-        maxMembers: membership.family.maxMembers,
-        premiumUntil: membership.family.premiumUntil.toISOString(),
-      };
-
-      // Include invite code and member list only for owner
-      if (membership.role === "OWNER") {
-        family.inviteCode = membership.family.inviteCode;
-        family.members = membership.family.members.map((m) => ({
-          deviceIdShort: m.deviceId.substring(0, 8),
-          role: m.role,
-          joinedAt: m.joinedAt.toISOString(),
-        }));
-      }
-    }
-
-    return NextResponse.json(
-      {
-        premiumUntil,
-        source,
-        family,
-      },
-      { headers }
-    );
+    return NextResponse.json(status, { headers });
   } catch (error) {
     console.error("Failed to check discount status:", error);
     return NextResponse.json(

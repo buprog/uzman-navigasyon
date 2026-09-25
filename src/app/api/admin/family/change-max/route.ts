@@ -28,6 +28,27 @@ export async function POST(req: Request) {
       );
     }
 
+    // Check each family's active member count
+    for (const id of ids) {
+      const family = await prisma.familyPlan.findUnique({
+        where: { id },
+        include: {
+          members: {
+            where: { removedAt: null },
+          },
+        },
+      });
+
+      if (family && family.members.length > maxMembers) {
+        return NextResponse.json(
+          {
+            error: `Aile ${family.inviteCode} için yeni limit (${maxMembers}) mevcut üye sayısından (${family.members.length}) küçük olamaz`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     await prisma.familyPlan.updateMany({
       where: { id: { in: ids } },
       data: { maxMembers },

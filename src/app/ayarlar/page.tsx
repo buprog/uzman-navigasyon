@@ -36,6 +36,7 @@ type FamilyInfo = {
   role: "OWNER" | "MEMBER";
   inviteCode?: string;
   members?: Array<{
+    id: string;
     deviceIdShort: string;
     role: string;
     joinedAt: string;
@@ -278,7 +279,7 @@ export default function AyarlarPage() {
     }
   }
 
-  async function removeMember(memberDeviceIdShort: string) {
+  async function removeMember(memberId: string) {
     if (!confirm("Bu üyeyi çıkarmak istediğinize emin misiniz?")) return;
 
     setFamilyMsg("");
@@ -289,7 +290,7 @@ export default function AyarlarPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ownerDeviceId: deviceId,
-          memberDeviceIdShort,
+          memberId,
         }),
       });
 
@@ -669,7 +670,7 @@ export default function AyarlarPage() {
                         </div>
                         {m.role !== "OWNER" && (
                           <button
-                            onClick={() => removeMember(m.deviceIdShort)}
+                            onClick={() => removeMember(m.id)}
                             className="text-red-600 hover:text-red-700 text-xs font-medium"
                           >
                             Çıkar
