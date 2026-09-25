@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getDevicePremium } from "@/lib/effectivePlan";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/discount/status?deviceId=...
- * Public API to check device premium status
+ * Public API to check device premium status with family membership support
  */
 export async function GET(req: Request) {
   const headers = {
@@ -25,16 +26,75 @@ export async function GET(req: Request) {
       );
     }
 
-    const device = await prisma.deviceIdentity.findUnique({
-      where: { deviceId },
+    const now = new Date();
+
+    // Check device individual premium
+    const devicePremium = await getDevicePremium(deviceId);
+
+    // Check family membership
+    const membership = await prisma.familyMember.findFirst({
+      where: {
+        deviceId,
+        removedAt: null,
+      },
+      include: {
+        family: {
+          include: {
+            members: {
+              where: {
+                removedAt: null,
+              },
+              orderBy: {
+                joinedAt: "asc",
+              },
+            },
+          },
+        },
+      },
     });
 
-    const premiumUntil =
-      device?.premiumExpiresAt && device.premiumExpiresAt > new Date()
-        ? device.premiumExpiresAt.toISOString()
-        : null;
+    let premiumUntil: string | null = null;
+    let source: "individual" | "family" | null = null;
+    let family: any = null;
 
-    return NextResponse.json({ premiumUntil }, { headers });
+    // Individual premium takes priority
+    if (devicePremium.hasPremium) {
+      premiumUntil = devicePremium.premiumExpiresAt!.toISOString();
+      source = "individual";
+    } else if (
+      membership &&
+      membership.family.status === "ACTIVE" &&
+      membership.family.premiumUntil > now
+    ) {
+      // Family premium
+      premiumUntil = membership.family.premiumUntil.toISOString();
+      source = "family";
+
+      family = {
+        role: membership.role,
+        maxMembers: membership.family.maxMembers,
+        premiumUntil: membership.family.premiumUntil.toISOString(),
+      };
+
+      // Include invite code and member list only for owner
+      if (membership.role === "OWNER") {
+        family.inviteCode = membership.family.inviteCode;
+        family.members = membership.family.members.map((m) => ({
+          deviceIdShort: m.deviceId.substring(0, 8),
+          role: m.role,
+          joinedAt: m.joinedAt.toISOString(),
+        }));
+      }
+    }
+
+    return NextResponse.json(
+      {
+        premiumUntil,
+        source,
+        family,
+      },
+      { headers }
+    );
   } catch (error) {
     console.error("Failed to check discount status:", error);
     return NextResponse.json(

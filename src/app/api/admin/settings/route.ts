@@ -20,6 +20,9 @@ export async function GET(req: Request) {
           id: "default",
           rotationInterval: 5,
           rotationMode: "sıralı",
+          individualYearlyTl: 600,
+          familyYearlyTl: null,
+          familyMaxMembers: 5,
         },
       });
       return NextResponse.json({ settings: newSettings });
@@ -55,16 +58,52 @@ export async function PUT(req: Request) {
       );
     }
 
+    // Validate pricing fields if provided
+    const updateData: any = {
+      rotationInterval: body.rotationInterval,
+      rotationMode: body.rotationMode,
+    };
+
+    if (body.individualYearlyTl !== undefined) {
+      if (body.individualYearlyTl < 0) {
+        return NextResponse.json(
+          { error: "Bireysel fiyat negatif olamaz" },
+          { status: 400 }
+        );
+      }
+      updateData.individualYearlyTl = body.individualYearlyTl;
+    }
+
+    if (body.familyYearlyTl !== undefined) {
+      if (body.familyYearlyTl !== null && body.familyYearlyTl < 0) {
+        return NextResponse.json(
+          { error: "Aile fiyat negatif olamaz" },
+          { status: 400 }
+        );
+      }
+      updateData.familyYearlyTl = body.familyYearlyTl;
+    }
+
+    if (body.familyMaxMembers !== undefined) {
+      if (body.familyMaxMembers < 2 || body.familyMaxMembers > 20) {
+        return NextResponse.json(
+          { error: "Aile max üye 2-20 arası olmalı" },
+          { status: 400 }
+        );
+      }
+      updateData.familyMaxMembers = body.familyMaxMembers;
+    }
+
     const settings = await prisma.adSettings.upsert({
       where: { id: "default" },
-      update: {
-        rotationInterval: body.rotationInterval,
-        rotationMode: body.rotationMode,
-      },
+      update: updateData,
       create: {
         id: "default",
         rotationInterval: body.rotationInterval,
         rotationMode: body.rotationMode,
+        individualYearlyTl: body.individualYearlyTl ?? 600,
+        familyYearlyTl: body.familyYearlyTl ?? null,
+        familyMaxMembers: body.familyMaxMembers ?? 5,
       },
     });
 
@@ -72,9 +111,9 @@ export async function PUT(req: Request) {
     await logAdminAccess(
       adminEmail,
       ip,
-      "update_ad_settings",
+      "update_settings",
       undefined,
-      `Interval: ${settings.rotationInterval}s, Mode: ${settings.rotationMode}`
+      `Interval: ${settings.rotationInterval}s, Mode: ${settings.rotationMode}, IndividualTl: ${settings.individualYearlyTl}, FamilyTl: ${settings.familyYearlyTl}, FamilyMax: ${settings.familyMaxMembers}`
     );
 
     return NextResponse.json({ settings });

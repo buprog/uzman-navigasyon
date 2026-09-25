@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizeDiscountCode } from "@/lib/discountCode";
+import { generateFamilyInviteCode } from "@/lib/familyInviteCode";
 
 export const dynamic = "force-dynamic";
 
@@ -118,14 +119,32 @@ export async function POST(req: Request) {
       });
 
       if (existingRedemption) {
+        // Return existing premium info
+        const responseBody: any = {
+          ok: false,
+          error: "already_redeemed",
+          message: "Bu kod zaten kullanılmış",
+          premiumUntil: existingRedemption.premiumUntil?.toISOString() || null,
+        };
+
+        // For FAMILY type, also return family info
+        if (discountCode.type === "FAMILY") {
+          const family = await tx.familyPlan.findFirst({
+            where: {
+              ownerDeviceId: deviceId,
+              discountCodeId: discountCode.id,
+            },
+          });
+          if (family) {
+            responseBody.type = "FAMILY";
+            responseBody.inviteCode = family.inviteCode;
+            responseBody.maxMembers = family.maxMembers;
+          }
+        }
+
         return {
           status: 409,
-          body: {
-            ok: false,
-            error: "already_redeemed",
-            message: "Bu kod zaten kullanılmış",
-            premiumUntil: existingRedemption.premiumUntil?.toISOString() || null,
-          },
+          body: responseBody,
         };
       }
 
@@ -190,8 +209,57 @@ export async function POST(req: Request) {
         },
       });
 
-      // If no rows updated, someone else claimed the last use
+      // If no rows updated, re-read the code and return accurate reason
       if (updated.count === 0) {
+        const currentCode = await tx.discountCode.findUnique({
+          where: { id: discountCode.id },
+        });
+
+        if (!currentCode) {
+          return {
+            status: 404,
+            body: {
+              ok: false,
+              error: "not_found",
+              message: "Geçersiz kod",
+            },
+          };
+        }
+
+        if (currentCode.disabled) {
+          return {
+            status: 410,
+            body: {
+              ok: false,
+              error: "disabled",
+              message: "Bu kod devre dışı",
+            },
+          };
+        }
+
+        if (now < currentCode.startsAt) {
+          return {
+            status: 400,
+            body: {
+              ok: false,
+              error: "not_started",
+              message: "Bu kod henüz geçerli değil",
+            },
+          };
+        }
+
+        if (now > currentCode.endsAt) {
+          return {
+            status: 410,
+            body: {
+              ok: false,
+              error: "expired",
+              message: "Bu kodun süresi dolmuş",
+            },
+          };
+        }
+
+        // Must be used up
         return {
           status: 410,
           body: {
@@ -202,8 +270,10 @@ export async function POST(req: Request) {
         };
       }
 
-      // Calculate premium until for PREMIUM_DAYS
+      // Calculate premium until and handle type-specific logic
       let premiumUntil: Date | null = null;
+      let familyInviteCode: string | undefined;
+      let familyMaxMembers: number | undefined;
 
       if (discountCode.type === "PREMIUM_DAYS") {
         // Find or create device identity
@@ -234,6 +304,79 @@ export async function POST(req: Request) {
             },
           });
         }
+      } else if (discountCode.type === "FAMILY") {
+        // Create or extend family plan
+        const maxMembers = discountCode.familyMaxMembers || 5;
+        const premiumDays = discountCode.premiumDays || 365;
+
+        // Check if device already owns an active family
+        const existingFamily = await tx.familyPlan.findFirst({
+          where: {
+            ownerDeviceId: deviceId,
+            status: "ACTIVE",
+          },
+        });
+
+        if (existingFamily) {
+          // Extend existing family
+          const currentPremium = existingFamily.premiumUntil;
+          const extendFrom = currentPremium > now ? currentPremium : now;
+          premiumUntil = new Date(
+            extendFrom.getTime() + premiumDays * 24 * 60 * 60 * 1000
+          );
+
+          await tx.familyPlan.update({
+            where: { id: existingFamily.id },
+            data: { premiumUntil },
+          });
+
+          familyInviteCode = existingFamily.inviteCode;
+          familyMaxMembers = existingFamily.maxMembers;
+        } else {
+          // Create new family plan
+          premiumUntil = new Date(
+            now.getTime() + premiumDays * 24 * 60 * 60 * 1000
+          );
+
+          // Generate unique invite code
+          let inviteCode: string;
+          let attempts = 0;
+          while (true) {
+            inviteCode = generateFamilyInviteCode();
+            const existing = await tx.familyPlan.findUnique({
+              where: { inviteCode },
+            });
+            if (!existing) break;
+            attempts++;
+            if (attempts > 10) {
+              throw new Error("Failed to generate unique invite code");
+            }
+          }
+
+          const family = await tx.familyPlan.create({
+            data: {
+              ownerDeviceId: deviceId,
+              inviteCode,
+              maxMembers,
+              premiumUntil,
+              status: "ACTIVE",
+              source: "code",
+              discountCodeId: discountCode.id,
+            },
+          });
+
+          // Create owner membership
+          await tx.familyMember.create({
+            data: {
+              familyId: family.id,
+              deviceId,
+              role: "OWNER",
+            },
+          });
+
+          familyInviteCode = inviteCode;
+          familyMaxMembers = maxMembers;
+        }
       }
 
       // Record redemption
@@ -246,19 +389,27 @@ export async function POST(req: Request) {
         },
       });
 
+      const responseBody: any = {
+        ok: true,
+        type: discountCode.type,
+        premiumDays:
+          discountCode.type === "PREMIUM_DAYS" || discountCode.type === "FAMILY"
+            ? discountCode.premiumDays
+            : null,
+        percent:
+          discountCode.type === "PERCENT" ? discountCode.percent : null,
+        premiumUntil: premiumUntil?.toISOString() || null,
+      };
+
+      // Add family-specific fields
+      if (discountCode.type === "FAMILY") {
+        responseBody.inviteCode = familyInviteCode;
+        responseBody.maxMembers = familyMaxMembers;
+      }
+
       return {
         status: 200,
-        body: {
-          ok: true,
-          type: discountCode.type,
-          premiumDays:
-            discountCode.type === "PREMIUM_DAYS"
-              ? discountCode.premiumDays
-              : null,
-          percent:
-            discountCode.type === "PERCENT" ? discountCode.percent : null,
-          premiumUntil: premiumUntil?.toISOString() || null,
-        },
+        body: responseBody,
       };
     });
 

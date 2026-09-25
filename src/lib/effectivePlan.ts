@@ -1,16 +1,31 @@
 /**
- * Device-aware effective plan resolution
- * When a device has redeemed premium, treat the request as premium
- * even if the shared demo user is basic
+ * Device-aware effective plan resolution with family membership support
+ * Priority: device individual premium > family membership > user plan
  */
 
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 
+export type PremiumSource = "individual" | "family" | null;
+
+export type FamilyInfo = {
+  role: "OWNER" | "MEMBER";
+  inviteCode?: string; // owner only
+  members?: Array<{
+    deviceIdShort: string;
+    role: "OWNER" | "MEMBER";
+    joinedAt: string;
+  }>; // owner only
+  maxMembers: number;
+  premiumUntil: string;
+};
+
 export type EffectivePlan = {
   plan: "basic" | "premium";
   premiumExpiresAt: Date | null;
   isDevicePremium: boolean;
+  source?: PremiumSource;
+  family?: FamilyInfo;
 };
 
 const DEVICE_ID_COOKIE = "un_did";
@@ -25,6 +40,72 @@ export function getDeviceIdFromCookie(): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Check if device has active family membership
+ */
+async function getFamilyMembership(deviceId: string): Promise<{
+  hasPremium: boolean;
+  premiumExpiresAt: Date | null;
+  familyInfo: FamilyInfo | null;
+}> {
+  const now = new Date();
+
+  // Find active membership for this device
+  const membership = await prisma.familyMember.findFirst({
+    where: {
+      deviceId,
+      removedAt: null,
+    },
+    include: {
+      family: {
+        include: {
+          members: {
+            where: {
+              removedAt: null,
+            },
+            orderBy: {
+              joinedAt: "asc",
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!membership || membership.family.status !== "ACTIVE") {
+    return { hasPremium: false, premiumExpiresAt: null, familyInfo: null };
+  }
+
+  const family = membership.family;
+  const hasPremium = family.premiumUntil > now;
+
+  if (!hasPremium) {
+    return { hasPremium: false, premiumExpiresAt: null, familyInfo: null };
+  }
+
+  const familyInfo: FamilyInfo = {
+    role: membership.role as "OWNER" | "MEMBER",
+    maxMembers: family.maxMembers,
+    premiumUntil: family.premiumUntil.toISOString(),
+  };
+
+  // Include invite code and member list only for owner
+  if (membership.role === "OWNER") {
+    familyInfo.inviteCode = family.inviteCode;
+    familyInfo.members = family.members.map((m) => ({
+      deviceIdShort: m.deviceId.substring(0, 8),
+      role: m.role as "OWNER" | "MEMBER",
+      joinedAt: m.joinedAt.toISOString(),
+    }));
+  }
+
+  return {
+    hasPremium,
+    premiumExpiresAt: family.premiumUntil,
+    familyInfo,
+  };
 }
 
 /**
@@ -59,16 +140,18 @@ export async function getDevicePremium(
 }
 
 /**
- * Resolve effective plan for a user, considering device premium
- * Device premium overrides user plan
+ * Resolve effective plan for a user, considering device premium and family membership
+ * Priority: device individual premium > family membership > user plan
  */
 export async function getEffectivePlan(
   userPlan: string | null | undefined,
   userPremiumExpiresAt: Date | string | null | undefined,
   deviceId?: string | null
 ): Promise<EffectivePlan> {
-  // First check device premium
+  // Get actual device ID
   const actualDeviceId = deviceId ?? getDeviceIdFromCookie();
+
+  // First check device individual premium
   const devicePremium = await getDevicePremium(actualDeviceId);
 
   if (devicePremium.hasPremium) {
@@ -76,7 +159,23 @@ export async function getEffectivePlan(
       plan: "premium",
       premiumExpiresAt: devicePremium.premiumExpiresAt,
       isDevicePremium: true,
+      source: "individual",
     };
+  }
+
+  // Then check family membership
+  if (actualDeviceId) {
+    const familyMembership = await getFamilyMembership(actualDeviceId);
+
+    if (familyMembership.hasPremium) {
+      return {
+        plan: "premium",
+        premiumExpiresAt: familyMembership.premiumExpiresAt,
+        isDevicePremium: true,
+        source: "family",
+        family: familyMembership.familyInfo!,
+      };
+    }
   }
 
   // Fall back to user plan
@@ -85,6 +184,7 @@ export async function getEffectivePlan(
       plan: "basic",
       premiumExpiresAt: null,
       isDevicePremium: false,
+      source: null,
     };
   }
 
@@ -99,6 +199,7 @@ export async function getEffectivePlan(
         plan: "basic",
         premiumExpiresAt: null,
         isDevicePremium: false,
+        source: null,
       };
     }
   }
@@ -110,5 +211,6 @@ export async function getEffectivePlan(
         ? new Date(userPremiumExpiresAt)
         : userPremiumExpiresAt || null,
     isDevicePremium: false,
+    source: "individual",
   };
 }
