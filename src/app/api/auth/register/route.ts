@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { prisma, isDatabaseNotReadyError } from "@/lib/prisma";
 import { createSession, hashPassword, getSessionUser } from "@/lib/auth";
 import { normalizeEmail } from "@/lib/email";
+import { isTourOwned, removeTourOwnership } from "@/lib/tourOwnership";
 
 const DEMO_EMAIL = "operator@demo.com";
 const DEVICE_ID_COOKIE = "un_did";
@@ -76,20 +77,25 @@ export async function POST(req: Request) {
     // Transfer current tour from demo user if registering from demo session
     const previousUser = await getSessionUser();
     if (previousUser && previousUser.email === DEMO_EMAIL && currentTourId) {
-      // Only transfer the specific tour if it exists, belongs to demo user, and is NOT a sample
-      const tour = await prisma.tour.findFirst({
-        where: {
-          id: currentTourId,
-          userId: previousUser.id,
-          isSample: false,
-        },
-      });
-      
-      if (tour) {
-        await prisma.tour.update({
-          where: { id: tour.id },
-          data: { userId: user.id },
+      // Verify ownership via signed cookie
+      if (isTourOwned(currentTourId)) {
+        // Only transfer the specific tour if it exists, belongs to demo user, and is NOT a sample
+        const tour = await prisma.tour.findFirst({
+          where: {
+            id: currentTourId,
+            userId: previousUser.id,
+            isSample: false,
+          },
         });
+        
+        if (tour) {
+          await prisma.tour.update({
+            where: { id: tour.id },
+            data: { userId: user.id },
+          });
+          // Remove from ownership cookie after transfer
+          removeTourOwnership(currentTourId);
+        }
       }
     }
 

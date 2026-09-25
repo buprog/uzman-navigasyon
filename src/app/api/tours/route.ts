@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { countTours, LIMIT_MESSAGES, limitsFor } from "@/lib/plan";
 import { computeDayCount } from "@/lib/dayCount";
+import { addTourOwnership } from "@/lib/tourOwnership";
 
 type PlacePayload = {
   name?: string;
@@ -126,6 +127,9 @@ export async function POST(req: Request) {
     },
     include: { stops: true },
   });
+
+  // Track ownership for demo session transfer
+  addTourOwnership(tour.id);
 
   return NextResponse.json({ tour });
 }

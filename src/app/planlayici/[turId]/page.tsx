@@ -22,6 +22,7 @@ import { TrialEndNotification } from "@/components/TrialEndNotification";
 import { RouteWeatherStrip, RouteWeatherStripSkeleton } from "@/components/RouteWeatherStrip";
 import { useRouteWeather } from "@/hooks/useRouteWeather";
 import { sampleRoutePoints } from "@/lib/routeWeather";
+import { setCurrentTourId } from "@/lib/tourContext";
 
 type Stop = {
   id: string;
@@ -84,6 +85,13 @@ export default function PlanlayiciPage() {
   const mapRef = useRef<maplibregl.Map | null>(null);
   const mobileToolbarRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  
+  // Track this tour as current for register/login transfer
+  useEffect(() => {
+    if (turId) {
+      setCurrentTourId(turId);
+    }
+  }, [turId]);
   
   // Detect if in preview mode for mock weather
   const useMockWeather = searchParams.get('previewRouteWeather') === 'mock' || 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PAYMENT_CONFIG, processTestPayment } from "@/lib/paymentConfig";
 import { completeTrialWithPayment, completeTrialWithoutPayment } from "@/lib/trial";
 import { getDeviceIdentity } from "@/lib/deviceIdentity";
+import { getCurrentTourId } from "@/lib/tourContext";
 
 type Props = {
   onClose: () => void;
@@ -56,6 +57,7 @@ export function PaymentModal({ onClose, onPaymentComplete }: Props) {
     const body: any = {
       email: fd.get("email"),
       password: fd.get("password"),
+      currentTourId: getCurrentTourId(),
     };
     
     if (authMode === "signup") {

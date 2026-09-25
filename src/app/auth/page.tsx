@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { getCurrentTourId } from "@/lib/tourContext";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function AuthPage() {
     const body: any = {
       email: fd.get("email"),
       password: fd.get("password"),
+      currentTourId: getCurrentTourId(),
     };
     
     if (mode === "signup") {

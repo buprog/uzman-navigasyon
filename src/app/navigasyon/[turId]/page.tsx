@@ -6,6 +6,7 @@ import { NavigationView } from "@/components/NavigationView";
 import { PaymentModal } from "@/components/PaymentModal";
 import type { MapStop } from "@/components/MapView";
 import { isTrialActive, checkTrialResetParam } from "@/lib/trial";
+import { setCurrentTourId } from "@/lib/tourContext";
 
 type Stop = {
   id: string;
@@ -41,6 +42,13 @@ export default function NavigasyonPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [userPlan, setUserPlan] = useState<string>("basic");
   const [trialActive, setTrialActive] = useState(true);
+
+  // Track this tour as current for register/login transfer
+  useEffect(() => {
+    if (turId) {
+      setCurrentTourId(turId);
+    }
+  }, [turId]);
 
   // Detect if in preview mode for mock weather
   const useMockWeather = searchParams.get('previewRouteWeather') === 'mock' || 
